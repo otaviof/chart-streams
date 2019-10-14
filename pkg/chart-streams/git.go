@@ -17,7 +17,7 @@ func (g *Git) Clone() error {
 	storage := memory.NewStorage()
 	g.r, err = git.Clone(storage, nil, &git.CloneOptions{
 		URL:      "https://github.com/helm/charts.git",
-		Depth:    1,
+		Depth:    g.config.Depth,
 		Progress: os.Stdout,
 	})
 	return err

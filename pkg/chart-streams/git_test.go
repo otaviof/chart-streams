@@ -5,7 +5,7 @@ import (
 )
 
 func TestGit_Clone(t *testing.T) {
-	config := &Config{}
+	config := &Config{Depth: 1}
 	g := NewGit(config)
 	g.Clone()
 }

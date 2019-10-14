@@ -27,6 +27,16 @@ func (s *Server) listen() error {
 	return g.Run(s.config.ListenAddr)
 }
 
+func (s *Server) initGit() error {
+	g := NewGit(s.config)
+
+	if err := g.Clone(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // NewServer instantiate a new server instance.
 func NewServer(config *Config) *Server {
 	return &Server{config: config}

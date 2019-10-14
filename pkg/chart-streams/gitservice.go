@@ -17,3 +17,11 @@ func NewGitService(config *Config) *GitService {
 func (gs *GitService) Initialize() error {
 	return gs.gitRepository.Clone()
 }
+
+func (gs *GitService) GetHelmChart(name string, version string) error {
+	return nil
+}
+
+func (gs *GitService) GetIndex() (string, error) {
+	return "", nil
+}

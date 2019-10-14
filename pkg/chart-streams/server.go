@@ -21,13 +21,32 @@ func (s *ChartStreamServer) Start() error {
 	return s.listen()
 }
 
+func (s *ChartStreamServer) IndexHandler(c *gin.Context) {
+	index, err := s.gitService.GetIndex()
+	if err != nil {
+		c.AbortWithError(500, err)
+	}
+
+	c.YAML(200, index)
+}
+
+func (s *ChartStreamServer) DirectLinkHandler(c *gin.Context) {
+	name := c.Param("name")
+	version := c.Param("version")
+
+	err := s.gitService.GetHelmChart(name, version)
+	if err != nil {
+		c.AbortWithError(500, err)
+	}
+}
+
 // listen on configured address, after adding the route handlers to the framework. It can return
 // errors coming from Gin.
 func (s *ChartStreamServer) listen() error {
 	g := gin.Default()
 
-	g.GET("/index.yaml", IndexHandler)
-	g.GET("/chart/:name/*version", DirectLinkHandler)
+	g.GET("/index.yaml", s.IndexHandler)
+	g.GET("/chart/:name/*version", s.DirectLinkHandler)
 
 	return g.Run(s.config.ListenAddr)
 }

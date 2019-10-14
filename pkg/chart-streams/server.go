@@ -22,7 +22,7 @@ func (s *ChartStreamServer) Start() error {
 }
 
 func (s *ChartStreamServer) IndexHandler(c *gin.Context) {
-	index, err := s.chartStreamService.GetIndex()
+	index, err := s.chartStreamService.GetIndexFile()
 	if err != nil {
 		c.AbortWithError(500, err)
 	}

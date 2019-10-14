@@ -1,9 +1,13 @@
 package chartstreams
 
+import (
+	repo "k8s.io/helm/pkg/repo"
+)
+
 type ChartStreamService struct {
 	config  *Config
 	gitRepo *Git
-	index   map[string]interface{}
+	index   *repo.IndexFile
 }
 
 func NewChartStreamService(config *Config) *ChartStreamService {
@@ -16,8 +20,7 @@ func NewChartStreamService(config *Config) *ChartStreamService {
 }
 
 func (gs *ChartStreamService) Initialize() error {
-	gs.index = make(map[string]interface{})
-
+	gs.index = repo.NewIndexFile()
 	return gs.gitRepo.Clone()
 }
 
@@ -25,6 +28,6 @@ func (gs *ChartStreamService) GetHelmChart(name string, version string) error {
 	return nil
 }
 
-func (gs *ChartStreamService) GetIndex() (map[string]interface{}, error) {
+func (gs *ChartStreamService) GetIndexFile() (*repo.IndexFile, error) {
 	return gs.index, nil
 }

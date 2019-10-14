@@ -1,24 +1,24 @@
 package chartstreams
 
 type ChartStreamService struct {
-	config        *Config
-	gitRepository *Git
-	index         map[string]interface{}
+	config  *Config
+	gitRepo *Git
+	index   map[string]interface{}
 }
 
 func NewChartStreamService(config *Config) *ChartStreamService {
 	g := NewGit(config)
 
 	return &ChartStreamService{
-		config:        config,
-		gitRepository: g,
+		config:  config,
+		gitRepo: g,
 	}
 }
 
 func (gs *ChartStreamService) Initialize() error {
 	gs.index = make(map[string]interface{})
 
-	return gs.gitRepository.Clone()
+	return gs.gitRepo.Clone()
 }
 
 func (gs *ChartStreamService) GetHelmChart(name string, version string) error {

@@ -1,27 +1,27 @@
 package chartstreams
 
-type GitService struct {
+type ChartStreamService struct {
 	config        *Config
 	gitRepository *Git
 }
 
-func NewGitService(config *Config) *GitService {
+func NewChartStreamService(config *Config) *ChartStreamService {
 	g := NewGit(config)
 
-	return &GitService{
+	return &ChartStreamService{
 		config:        config,
 		gitRepository: g,
 	}
 }
 
-func (gs *GitService) Initialize() error {
+func (gs *ChartStreamService) Initialize() error {
 	return gs.gitRepository.Clone()
 }
 
-func (gs *GitService) GetHelmChart(name string, version string) error {
+func (gs *ChartStreamService) GetHelmChart(name string, version string) error {
 	return nil
 }
 
-func (gs *GitService) GetIndex() (string, error) {
+func (gs *ChartStreamService) GetIndex() (string, error) {
 	return "", nil
 }

@@ -7,12 +7,17 @@ import (
 // HelmServer represents the chart-streams server offering its API. The server puts together the routes,
 // and bootstrap steps in order to respond as a valid Helm repository.
 type HelmServer struct {
-	config *Config
+	config     *Config
+	gitService *GitService
 }
 
 // Start executes the boostrap steps in order to start listening on configured address. It can return
 // errors from "listen" method.
 func (s *HelmServer) Start() error {
+	if err := s.gitService.Initialize(); err != nil {
+		return err
+	}
+
 	return s.listen()
 }
 
@@ -27,17 +32,11 @@ func (s *HelmServer) listen() error {
 	return g.Run(s.config.ListenAddr)
 }
 
-func (s *HelmServer) initGit() error {
-	g := NewGit(s.config)
-
-	if err := g.Clone(); err != nil {
-		return err
-	}
-
-	return nil
-}
-
 // NewServer instantiate a new server instance.
 func NewServer(config *Config) *HelmServer {
-	return &HelmServer{config: config}
+	gs := NewGitService(config)
+	return &HelmServer{
+		config:     config,
+		gitService: gs,
+	}
 }

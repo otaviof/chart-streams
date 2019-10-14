@@ -4,16 +4,16 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// HelmServer represents the chart-streams server offering its API. The server puts together the routes,
+// ChartStreamServer represents the chart-streams server offering its API. The server puts together the routes,
 // and bootstrap steps in order to respond as a valid Helm repository.
-type HelmServer struct {
+type ChartStreamServer struct {
 	config     *Config
 	gitService *GitService
 }
 
 // Start executes the boostrap steps in order to start listening on configured address. It can return
 // errors from "listen" method.
-func (s *HelmServer) Start() error {
+func (s *ChartStreamServer) Start() error {
 	if err := s.gitService.Initialize(); err != nil {
 		return err
 	}
@@ -23,7 +23,7 @@ func (s *HelmServer) Start() error {
 
 // listen on configured address, after adding the route handlers to the framework. It can return
 // errors coming from Gin.
-func (s *HelmServer) listen() error {
+func (s *ChartStreamServer) listen() error {
 	g := gin.Default()
 
 	g.GET("/index.yaml", IndexHandler)
@@ -33,9 +33,9 @@ func (s *HelmServer) listen() error {
 }
 
 // NewServer instantiate a new server instance.
-func NewServer(config *Config) *HelmServer {
+func NewServer(config *Config) *ChartStreamServer {
 	gs := NewGitService(config)
-	return &HelmServer{
+	return &ChartStreamServer{
 		config:     config,
 		gitService: gs,
 	}

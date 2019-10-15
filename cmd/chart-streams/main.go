@@ -5,9 +5,10 @@ import (
 )
 
 const defaultDepth = 100
+const defaultRepoURL = "https://github.com/helm/charts.git"
 
 func main() {
-	config := &cs.Config{Depth: defaultDepth}
+	config := &cs.Config{Depth: defaultDepth, RepoURL: defaultRepoURL}
 	s := cs.NewServer(config)
 	if err := s.Start(); err != nil {
 		panic(err)

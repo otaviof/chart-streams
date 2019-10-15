@@ -4,6 +4,12 @@ import (
 	repo "k8s.io/helm/pkg/repo"
 )
 
+type ChartProvider interface {
+	Initialize() error
+	GetHelmChart(name, version string) error
+	GetIndexFile() (*repo.IndexFile, error)
+}
+
 type ChartStreamService struct {
 	config  *Config
 	gitRepo *Git

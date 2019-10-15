@@ -7,14 +7,14 @@ import (
 // ChartStreamServer represents the chart-streams server offering its API. The server puts together the routes,
 // and bootstrap steps in order to respond as a valid Helm repository.
 type ChartStreamServer struct {
-	config             *Config
-	chartStreamService *ChartStreamService
+	config        *Config
+	chartProvider ChartProvider
 }
 
 // Start executes the boostrap steps in order to start listening on configured address. It can return
 // errors from "listen" method.
 func (s *ChartStreamServer) Start() error {
-	if err := s.chartStreamService.Initialize(); err != nil {
+	if err := s.chartProvider.Initialize(); err != nil {
 		return err
 	}
 
@@ -22,7 +22,7 @@ func (s *ChartStreamServer) Start() error {
 }
 
 func (s *ChartStreamServer) IndexHandler(c *gin.Context) {
-	index, err := s.chartStreamService.GetIndexFile()
+	index, err := s.chartProvider.GetIndexFile()
 	if err != nil {
 		c.AbortWithError(500, err)
 	}
@@ -34,7 +34,7 @@ func (s *ChartStreamServer) DirectLinkHandler(c *gin.Context) {
 	name := c.Param("name")
 	version := c.Param("version")
 
-	err := s.chartStreamService.GetHelmChart(name, version)
+	err := s.chartProvider.GetHelmChart(name, version)
 	if err != nil {
 		c.AbortWithError(500, err)
 	}
@@ -55,7 +55,7 @@ func (s *ChartStreamServer) listen() error {
 func NewServer(config *Config) *ChartStreamServer {
 	gs := NewChartStreamService(config)
 	return &ChartStreamServer{
-		config:             config,
-		chartStreamService: gs,
+		config:        config,
+		chartProvider: gs,
 	}
 }

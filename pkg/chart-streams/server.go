@@ -34,7 +34,7 @@ func (s *ChartStreamServer) DirectLinkHandler(c *gin.Context) {
 	name := c.Param("name")
 	version := c.Param("version")
 
-	err := s.chartProvider.GetHelmChart(name, version)
+	err := s.chartProvider.GetChart(name, version)
 	if err != nil {
 		c.AbortWithError(500, err)
 	}

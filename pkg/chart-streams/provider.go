@@ -6,7 +6,7 @@ import (
 
 type ChartProvider interface {
 	Initialize() error
-	GetHelmChart(name, version string) error
+	GetChart(name, version string) error
 	GetIndexFile() (*repo.IndexFile, error)
 }
 
@@ -30,7 +30,7 @@ func (gs *StreamChartProvider) Initialize() error {
 	return gs.gitRepo.Clone()
 }
 
-func (gs *StreamChartProvider) GetHelmChart(name string, version string) error {
+func (gs *StreamChartProvider) GetChart(name string, version string) error {
 	return nil
 }
 

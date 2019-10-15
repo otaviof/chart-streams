@@ -10,30 +10,30 @@ type ChartProvider interface {
 	GetIndexFile() (*repo.IndexFile, error)
 }
 
-type ChartStreamService struct {
+type StreamChartProvider struct {
 	config  *Config
 	gitRepo *Git
 	index   *repo.IndexFile
 }
 
-func NewChartStreamService(config *Config) *ChartStreamService {
+func NewStreamChartProvider(config *Config) *StreamChartProvider {
 	g := NewGit(config)
 
-	return &ChartStreamService{
+	return &StreamChartProvider{
 		config:  config,
 		gitRepo: g,
 	}
 }
 
-func (gs *ChartStreamService) Initialize() error {
+func (gs *StreamChartProvider) Initialize() error {
 	gs.index = repo.NewIndexFile()
 	return gs.gitRepo.Clone()
 }
 
-func (gs *ChartStreamService) GetHelmChart(name string, version string) error {
+func (gs *StreamChartProvider) GetHelmChart(name string, version string) error {
 	return nil
 }
 
-func (gs *ChartStreamService) GetIndexFile() (*repo.IndexFile, error) {
+func (gs *StreamChartProvider) GetIndexFile() (*repo.IndexFile, error) {
 	return gs.index, nil
 }

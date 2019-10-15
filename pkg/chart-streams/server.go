@@ -53,9 +53,9 @@ func (s *ChartStreamServer) listen() error {
 
 // NewServer instantiate a new server instance.
 func NewServer(config *Config) *ChartStreamServer {
-	gs := NewChartStreamService(config)
+	p := NewStreamChartProvider(config)
 	return &ChartStreamServer{
 		config:        config,
-		chartProvider: gs,
+		chartProvider: p,
 	}
 }

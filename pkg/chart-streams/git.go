@@ -1,12 +1,7 @@
 package chartstreams
 
 import (
-	"archive/tar"
-	"bufio"
-	"bytes"
-	"compress/gzip"
 	"fmt"
-	"io"
 	"os"
 	"sort"
 
@@ -54,17 +49,9 @@ type commitIterWrapper struct {
 
 const defaultChartRelativePath = "stable"
 
-func buildChart(wt *git.Worktree, chartPath string) ([]byte, error) {
+func buildChart(wt *git.Worktree, chartPath string) (*Package, error) {
 
-	var b bytes.Buffer
-
-	mw := bufio.NewWriter(&b)
-
-	gzw := gzip.NewWriter(mw)
-	defer gzw.Close()
-
-	tw := tar.NewWriter(gzw)
-	defer tw.Close()
+	p := &Package{}
 
 	walkErr := worktree.Walk(wt, chartPath, func(wt *git.Worktree, path string, info os.FileInfo, err error) error {
 		if info.IsDir() {
@@ -81,20 +68,7 @@ func buildChart(wt *git.Worktree, chartPath string) ([]byte, error) {
 			return nil
 		}
 
-		header, err := tar.FileInfoHeader(info, info.Name())
-		if err != nil {
-			return err
-		}
-
-		header.Name = path
-
-		if err := tw.WriteHeader(header); err != nil {
-			return err
-		}
-
-		if _, err := io.Copy(tw, f); err != nil {
-			return err
-		}
+		p.Add(chartPath, info, f)
 
 		return nil
 	})
@@ -105,7 +79,7 @@ func buildChart(wt *git.Worktree, chartPath string) ([]byte, error) {
 
 	// fmt.Printf("chart path: %s, chart files: %v\n\n", chartPath, chart.GetFiles())
 
-	return b.Bytes(), nil
+	return p, nil
 }
 
 func (i *commitIterWrapper) ForEach(f func(*Commit) error) error {

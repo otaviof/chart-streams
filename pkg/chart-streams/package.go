@@ -9,20 +9,27 @@ import (
 	"os"
 )
 
+// Package wraps the Helm Chart archive.
 type Package struct {
-	b bytes.Buffer
+	content bytes.Buffer
 }
 
-func (p *Package) Add(path string, info os.FileInfo, b io.Reader) error {
-	mw := bufio.NewWriter(&p.b)
+// Read reads the Helm Chart archive bytes.
+func (p *Package) Read(buf []byte) (int, error) {
+	return p.content.Read(buf)
+}
 
-	gzw := gzip.NewWriter(mw)
+// Add adds the contents of the given reader in the archive.
+func (p *Package) Add(path string, fileInfo os.FileInfo, r io.Reader) error {
+	bw := bufio.NewWriter(&p.content)
+
+	gzw := gzip.NewWriter(bw)
 	defer gzw.Close()
 
 	tw := tar.NewWriter(gzw)
 	defer tw.Close()
 
-	header, err := tar.FileInfoHeader(info, info.Name())
+	header, err := tar.FileInfoHeader(fileInfo, fileInfo.Name())
 	if err != nil {
 		return err
 	}
@@ -33,7 +40,7 @@ func (p *Package) Add(path string, info os.FileInfo, b io.Reader) error {
 		return err
 	}
 
-	if _, err := io.Copy(tw, b); err != nil {
+	if _, err := io.Copy(tw, r); err != nil {
 		return err
 	}
 

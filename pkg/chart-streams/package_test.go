@@ -9,12 +9,12 @@ import (
 
 func TestPackage_Add(t *testing.T) {
 	type fields struct {
-		b bytes.Buffer
+		content bytes.Buffer
 	}
 	type args struct {
 		path string
 		info os.FileInfo
-		b    io.Reader
+		r    io.Reader
 	}
 	tests := []struct {
 		name    string
@@ -27,9 +27,9 @@ func TestPackage_Add(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			p := &Package{
-				b: tt.fields.b,
+				content: tt.fields.content,
 			}
-			if err := p.Add(tt.args.path, tt.args.info, tt.args.b); (err != nil) != tt.wantErr {
+			if err := p.Add(tt.args.path, tt.args.info, tt.args.r); (err != nil) != tt.wantErr {
 				t.Errorf("Package.Add() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})

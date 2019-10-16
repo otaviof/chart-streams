@@ -2,7 +2,10 @@ package chartstreams
 
 import (
 	"fmt"
+	"sort"
 
+	"gopkg.in/src-d/go-git.v4/plumbing/object"
+	git "gopkg.in/src-d/go-git.v4"
 	repo "k8s.io/helm/pkg/repo"
 )
 
@@ -39,8 +42,37 @@ func (gs *StreamChartProvider) Initialize() error {
 		return fmt.Errorf("Initialize(): error getting commit iterator: %s", err)
 	}
 
-	commitPrinterFunc := func(c *Commit) error {
-		fmt.Printf("commit: %v", c)
+	commitPrinterFunc := func(c *object.Commit) error {
+		w, err := gs.gitRepo.r.Worktree()
+		if err != nil {
+			return err
+		}
+
+		checkoutErr := w.Checkout(&git.CheckoutOptions{Hash: c.Hash})
+		if checkoutErr != nil {
+			return checkoutErr
+		}
+
+		chartDirEntries, readDirErr := w.Filesystem.ReadDir(defaultChartRelativePath)
+		if readDirErr != nil {
+			return readDirErr
+		}
+
+		var charts []string
+		for _, entry := range chartDirEntries {
+			chartPath := w.Filesystem.Join(defaultChartRelativePath, entry.Name())
+			charts = append(charts, chartPath)
+			b, err := buildChart(w, chartPath)
+			if err != nil {
+				return err
+			}
+			fmt.Printf("chart: %s, bytes: %v", chartPath, b)
+		}
+
+		sort.Strings(charts)
+
+		fmt.Printf("charts: %v", charts)
+
 		return nil
 	}
 

@@ -1,4 +1,5 @@
 .env
 .vscode
 .data
+output/
 vendor/

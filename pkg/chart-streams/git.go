@@ -1,8 +1,12 @@
 package chartstreams
 
 import (
+	"archive/tar"
+	"bufio"
+	"bytes"
+	"compress/gzip"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 	"sort"
 
@@ -50,8 +54,17 @@ type commitIterWrapper struct {
 
 const defaultChartRelativePath = "stable"
 
-func buildChart(wt *git.Worktree, chartPath string) (worktree.Chart, error) {
-	chart := make(worktree.Chart)
+func buildChart(wt *git.Worktree, chartPath string) ([]byte, error) {
+
+	var b bytes.Buffer
+
+	mw := bufio.NewWriter(&b)
+
+	gzw := gzip.NewWriter(mw)
+	defer gzw.Close()
+
+	tw := tar.NewWriter(gzw)
+	defer tw.Close()
 
 	walkErr := worktree.Walk(wt, chartPath, func(wt *git.Worktree, path string, info os.FileInfo, err error) error {
 		if info.IsDir() {
@@ -64,12 +77,24 @@ func buildChart(wt *git.Worktree, chartPath string) (worktree.Chart, error) {
 		}
 		defer f.Close()
 
-		b, readErr := ioutil.ReadAll(f)
-		if readErr != nil {
-			return readErr
+		if !info.Mode().IsRegular() {
+			return nil
 		}
 
-		chart[path] = b
+		header, err := tar.FileInfoHeader(info, info.Name())
+		if err != nil {
+			return err
+		}
+
+		header.Name = path
+
+		if err := tw.WriteHeader(header); err != nil {
+			return err
+		}
+
+		if _, err := io.Copy(tw, f); err != nil {
+			return err
+		}
 
 		return nil
 	})
@@ -78,9 +103,9 @@ func buildChart(wt *git.Worktree, chartPath string) (worktree.Chart, error) {
 		return nil, walkErr
 	}
 
-	fmt.Printf("chart path: %s, chart files: %v\n\n", chartPath, chart.GetFiles())
+	// fmt.Printf("chart path: %s, chart files: %v\n\n", chartPath, chart.GetFiles())
 
-	return chart, nil
+	return b.Bytes(), nil
 }
 
 func (i *commitIterWrapper) ForEach(f func(*Commit) error) error {
@@ -107,7 +132,11 @@ func (i *commitIterWrapper) ForEach(f func(*Commit) error) error {
 		for _, entry := range chartDirEntries {
 			chartPath := w.Filesystem.Join(defaultChartRelativePath, entry.Name())
 			charts = append(charts, chartPath)
-			buildChart(w, chartPath)
+			b, err := buildChart(w, chartPath)
+			if err != nil {
+				return err
+			}
+			fmt.Printf("chart: %s, bytes: %v", chartPath, b)
 		}
 
 		sort.Strings(charts)

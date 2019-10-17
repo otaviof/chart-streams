@@ -35,14 +35,10 @@ func (p *Package) Add(path string, fileInfo os.FileInfo, r io.Reader) error {
 	}
 
 	header.Name = path
-
 	if err := tw.WriteHeader(header); err != nil {
 		return err
 	}
 
-	if _, err := io.Copy(tw, r); err != nil {
-		return err
-	}
-
-	return nil
+	_, err = io.Copy(tw, r)
+	return err
 }

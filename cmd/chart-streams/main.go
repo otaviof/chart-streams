@@ -1,16 +1,39 @@
 package main
 
 import (
-	cs "github.com/otaviof/chart-streams/pkg/chart-streams"
+	"log"
+	"strings"
+
+	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
+	"github.com/spf13/viper"
 )
 
-const defaultDepth = 100
-const defaultRepoURL = "https://github.com/helm/charts.git"
+const appName = "chart-streams"
+
+// rootCmd main command.
+var rootCmd = &cobra.Command{
+	Use: appName,
+}
+
+// init initialize the command-line flags and interpolation with environment.
+func init() {
+	flags := rootCmd.PersistentFlags()
+	viper.SetEnvPrefix(appName)
+	viper.AutomaticEnv()
+	viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
+	bindViperFlags(flags)
+}
+
+// bindViperFlags based on flag-set, creating a environment variable equivalent with Viper.
+func bindViperFlags(flags *pflag.FlagSet) {
+	if err := viper.BindPFlags(flags); err != nil {
+		log.Fatal(err)
+	}
+}
 
 func main() {
-	config := &cs.Config{Depth: defaultDepth, RepoURL: defaultRepoURL}
-	s := cs.NewServer(config)
-	if err := s.Start(); err != nil {
-		panic(err)
+	if err := rootCmd.Execute(); err != nil {
+		log.Fatal(err)
 	}
 }

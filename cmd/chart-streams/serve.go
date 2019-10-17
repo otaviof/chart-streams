@@ -21,6 +21,7 @@ func init() {
 
 	flags.Int("clone-depth", 1, "Git clone depth")
 	flags.String("repo-url", "https://github.com/helm/charts.git", "Helm Charts Git repository URL")
+	flags.String("listen-addr", ":8080", "Address to listen")
 
 	rootCmd.AddCommand(serveCmd)
 	bindViperFlags(flags)
@@ -29,8 +30,9 @@ func init() {
 // runServeCmd execute chart-streams server.
 func runServeCmd(cmd *cobra.Command, args []string) {
 	config := &cs.Config{
-		Depth:   viper.GetInt("clone-depth"),
-		RepoURL: viper.GetString("repo-url"),
+		Depth:      viper.GetInt("clone-depth"),
+		RepoURL:    viper.GetString("repo-url"),
+		ListenAddr: viper.GetString("listen-addr"),
 	}
 
 	s := cs.NewServer(config)

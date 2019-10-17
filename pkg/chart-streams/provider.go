@@ -6,7 +6,6 @@ import (
 
 	git "gopkg.in/src-d/go-git.v4"
 	"gopkg.in/src-d/go-git.v4/plumbing"
-	"gopkg.in/src-d/go-git.v4/plumbing/object"
 	repo "k8s.io/helm/pkg/repo"
 )
 
@@ -89,7 +88,10 @@ func getChartVersion(chartPath string) string {
 	return "1.0.0"
 }
 
-func getCommitForVersion(version string) *object.Commit {
+func (gs *StreamChartProvider) getCommitForVersion(name string, version string) *plumbing.Hash {
+	if v, ok := gs.chartNameVersionCommitMap[version]; ok {
+		return &v
+	}
 	return nil
 }
 
@@ -99,12 +101,12 @@ func (gs *StreamChartProvider) GetChart(name string, version string) (*Package, 
 		return nil, err
 	}
 
-	commit := getCommitForVersion(version)
-	if commit == nil {
+	hash := gs.getCommitForVersion(name, version)
+	if hash == nil {
 		return nil, fmt.Errorf("GetChart(): couldn't find commit hash from specified version")
 	}
 
-	checkoutErr := w.Checkout(&git.CheckoutOptions{Hash: commit.Hash})
+	checkoutErr := w.Checkout(&git.CheckoutOptions{Hash: *hash})
 	if checkoutErr != nil {
 		return nil, checkoutErr
 	}

@@ -88,7 +88,7 @@ func getChartVersion(chartPath string) string {
 	return "1.0.0"
 }
 
-func (gs *StreamChartProvider) getCommitForVersion(name string, version string) *plumbing.Hash {
+func (gs *StreamChartProvider) GetHashForChartVersion(name string, version string) *plumbing.Hash {
 	if v, ok := gs.chartNameVersionCommitMap[version]; ok {
 		return &v
 	}
@@ -101,7 +101,7 @@ func (gs *StreamChartProvider) GetChart(name string, version string) (*Package, 
 		return nil, err
 	}
 
-	hash := gs.getCommitForVersion(name, version)
+	hash := gs.GetHashForChartVersion(name, version)
 	if hash == nil {
 		return nil, fmt.Errorf("GetChart(): couldn't find commit hash from specified version")
 	}

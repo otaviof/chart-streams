@@ -19,9 +19,11 @@ var rootCmd = &cobra.Command{
 // init initialize the command-line flags and interpolation with environment.
 func init() {
 	flags := rootCmd.PersistentFlags()
+
 	viper.SetEnvPrefix(appName)
 	viper.AutomaticEnv()
 	viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
+
 	bindViperFlags(flags)
 }
 

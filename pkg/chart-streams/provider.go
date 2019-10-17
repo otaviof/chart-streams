@@ -3,9 +3,11 @@ package chartstreams
 import (
 	"fmt"
 	"io"
+	"io/ioutil"
 
 	git "gopkg.in/src-d/go-git.v4"
 	"gopkg.in/src-d/go-git.v4/plumbing"
+	"k8s.io/helm/pkg/chartutil"
 	repo "k8s.io/helm/pkg/repo"
 )
 
@@ -75,7 +77,7 @@ func (gs *StreamChartProvider) Initialize() error {
 		for _, entry := range chartDirEntries {
 			chartName := entry.Name()
 			chartPath := w.Filesystem.Join(defaultChartRelativePath, chartName)
-			chartVersion := getChartVersion(chartPath)
+			chartVersion := getChartVersion(w, chartPath)
 
 			gs.AddVersionMapping(chartName, chartVersion, c.Hash)
 		}
@@ -84,8 +86,34 @@ func (gs *StreamChartProvider) Initialize() error {
 	return nil
 }
 
-func getChartVersion(chartPath string) string {
-	return "1.0.0"
+func getChartVersion(wt *git.Worktree, chartPath string) string {
+	chartDirInfo, err := wt.Filesystem.Lstat(chartPath)
+	if err != nil {
+		return ""
+	}
+
+	if !chartDirInfo.IsDir() {
+		return ""
+	}
+
+	chartYamlPath := wt.Filesystem.Join(chartPath, "Chart.yaml")
+	chartYamlFile, err := wt.Filesystem.Open(chartYamlPath)
+	if err != nil {
+		return ""
+	}
+	defer chartYamlFile.Close()
+
+	b, err := ioutil.ReadAll(chartYamlFile)
+	if err != nil {
+		return ""
+	}
+
+	chartYaml, err := chartutil.UnmarshalChartfile(b)
+	if err != nil {
+		return ""
+	}
+
+	return chartYaml.GetVersion()
 }
 
 func (gs *StreamChartProvider) GetHashForChartVersion(name string, version string) *plumbing.Hash {

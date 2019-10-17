@@ -2,6 +2,7 @@ package chartstreams
 
 import (
 	"fmt"
+	"io"
 
 	git "gopkg.in/src-d/go-git.v4"
 	"gopkg.in/src-d/go-git.v4/plumbing"
@@ -49,8 +50,14 @@ func (gs *StreamChartProvider) Initialize() error {
 	if err != nil {
 		return fmt.Errorf("Initialize(): error getting commit iterator: %s", err)
 	}
+	defer commitIter.Close()
 
-	commitPrinterFunc := func(c *object.Commit) error {
+	for {
+		c, err := commitIter.Next()
+		if err != nil && err != io.EOF {
+			break
+		}
+
 		w, err := gs.gitRepo.r.Worktree()
 		if err != nil {
 			return err
@@ -73,13 +80,6 @@ func (gs *StreamChartProvider) Initialize() error {
 
 			gs.AddVersionMapping(chartName, chartVersion, c.Hash)
 		}
-
-		return nil
-	}
-
-	err = commitIter.ForEach(commitPrinterFunc)
-	if err != nil {
-		return fmt.Errorf("Initialize(): error iterating commits: %s", err)
 	}
 
 	return nil

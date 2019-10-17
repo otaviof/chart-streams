@@ -6,12 +6,13 @@ import (
 	"bytes"
 	"compress/gzip"
 	"io"
+	"io/ioutil"
 	"os"
 )
 
 // Package wraps the Helm Chart archive.
 type Package struct {
-	content     *bytes.Buffer
+	bytesBuffer *bytes.Buffer
 	bytesWriter *bufio.Writer
 	gzWriter    *gzip.Writer
 	tarWriter   *tar.Writer
@@ -24,7 +25,7 @@ func NewPackage() *Package {
 	tw := tar.NewWriter(gzw)
 
 	return &Package{
-		content:     b,
+		bytesBuffer: b,
 		bytesWriter: bw,
 		gzWriter:    gzw,
 		tarWriter:   tw,
@@ -33,26 +34,49 @@ func NewPackage() *Package {
 
 // Read reads the Helm Chart archive bytes.
 func (p *Package) Read(buf []byte) (int, error) {
-	return p.content.Read(buf)
+	p.bytesWriter.Flush()
+	return p.bytesBuffer.Read(buf)
 }
 
 func (p *Package) Close() {
-	p.gzWriter.Close()
+	p.tarWriter.Flush()
 	p.tarWriter.Close()
+
+	p.gzWriter.Flush()
+	p.gzWriter.Close()
 }
 
 // Add adds the contents of the given reader in the archive.
 func (p *Package) Add(path string, fileInfo os.FileInfo, r io.Reader) error {
+
 	header, err := tar.FileInfoHeader(fileInfo, fileInfo.Name())
 	if err != nil {
 		return err
 	}
 
 	header.Name = path
+
+	// Write down the header since there's no reader available.
+	if r == nil {
+		header.Mode = 0755
+		return p.tarWriter.WriteHeader(header)
+	}
+
+	b, err := ioutil.ReadAll(r)
+	if err != nil {
+		return err
+	}
+
+	header.Size = int64(len(b))
+	header.Mode = 0644
+
 	if err := p.tarWriter.WriteHeader(header); err != nil {
 		return err
 	}
 
-	_, err = io.Copy(p.tarWriter, r)
-	return err
+	if _, err = p.tarWriter.Write(b); err != nil {
+		return err
+	}
+
+	return nil
 }

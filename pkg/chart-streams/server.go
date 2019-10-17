@@ -45,7 +45,7 @@ func (s *ChartStreamServer) DirectLinkHandler(c *gin.Context) {
 		c.AbortWithError(500, err)
 	}
 
-	c.Data(http.StatusOK, "application/gzip", p.content.Bytes())
+	c.Data(http.StatusOK, "application/gzip", p.bytesBuffer.Bytes())
 }
 
 // listen on configured address, after adding the route handlers to the framework. It can return

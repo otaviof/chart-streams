@@ -33,7 +33,6 @@ func (g *Git) Clone() error {
 		URL:        g.config.RepoURL,
 		Depth:      g.config.Depth,
 		NoCheckout: true,
-		//Progress: os.Stdout,
 	})
 
 	if err != nil {
@@ -51,8 +50,12 @@ func buildChart(wt *git.Worktree, chartPath string, chartName string) (*Package,
 	defer p.Close()
 
 	walkErr := worktree.Walk(wt, chartPath, func(wt *git.Worktree, path string, fileInfo os.FileInfo, err error) error {
+
+		archivePath := filepath.Join(chartName, strings.TrimPrefix(path, chartPath))
+
 		if fileInfo.IsDir() {
-			return nil
+			// Do not include an io.Reader if it is a directory.
+			return p.Add(archivePath, fileInfo, nil)
 		}
 
 		f, openErr := wt.Filesystem.Open(path)
@@ -61,13 +64,7 @@ func buildChart(wt *git.Worktree, chartPath string, chartName string) (*Package,
 		}
 		defer f.Close()
 
-		if !fileInfo.Mode().IsRegular() {
-			return nil
-		}
-
-		path = filepath.Join(chartName, strings.TrimPrefix(path, chartPath))
-
-		if err := p.Add(path, fileInfo, f); err != nil {
+		if err := p.Add(archivePath, fileInfo, f); err != nil {
 			return err
 		}
 

@@ -4,8 +4,8 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// ChartStreamServer represents the chart-streams server offering its API. The server puts together the routes,
-// and bootstrap steps in order to respond as a valid Helm repository.
+// ChartStreamServer represents the chart-streams server offering its API. The server puts together
+// the routes, and bootstrap steps in order to respond as a valid Helm repository.
 type ChartStreamServer struct {
 	config        *Config
 	chartProvider ChartProvider
@@ -21,6 +21,7 @@ func (s *ChartStreamServer) Start() error {
 	return s.listen()
 }
 
+// IndexHandler endpoint handler to render a index.yaml file.
 func (s *ChartStreamServer) IndexHandler(c *gin.Context) {
 	index, err := s.chartProvider.GetIndexFile()
 	if err != nil {
@@ -30,6 +31,7 @@ func (s *ChartStreamServer) IndexHandler(c *gin.Context) {
 	c.YAML(200, index)
 }
 
+// DirectLinkHandler endpoint handler to directly load a chart tarball payload.
 func (s *ChartStreamServer) DirectLinkHandler(c *gin.Context) {
 	name := c.Param("name")
 	version := c.Param("version")

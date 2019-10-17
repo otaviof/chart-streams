@@ -10,8 +10,9 @@ import (
 // serveCmd sub-command to represent the server.
 var serveCmd = &cobra.Command{
 	Use:   "serve",
-	Short: "Execute Helm Repository server",
 	Run:   runServeCmd,
+	Short: "Execute Helm Repository server",
+	Long:  "Run the Helm-Charts server after cloning and preparing Git repository",
 }
 
 // init initialize the command-line flags and interpolation with environment.

@@ -1,6 +1,8 @@
 package chartstreams
 
 import (
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -36,10 +38,12 @@ func (s *ChartStreamServer) DirectLinkHandler(c *gin.Context) {
 	name := c.Param("name")
 	version := c.Param("version")
 
-	err := s.chartProvider.GetChart(name, version)
+	p, err := s.chartProvider.GetChart(name, version)
 	if err != nil {
 		c.AbortWithError(500, err)
 	}
+
+	c.Data(http.StatusOK, "application/gzip", p.content.Bytes())
 }
 
 // listen on configured address, after adding the route handlers to the framework. It can return

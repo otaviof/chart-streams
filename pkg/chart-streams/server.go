@@ -2,6 +2,7 @@ package chartstreams
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 )
@@ -37,6 +38,7 @@ func (s *ChartStreamServer) IndexHandler(c *gin.Context) {
 func (s *ChartStreamServer) DirectLinkHandler(c *gin.Context) {
 	name := c.Param("name")
 	version := c.Param("version")
+	version = strings.TrimPrefix(version, "/")
 
 	p, err := s.chartProvider.GetChart(name, version)
 	if err != nil {

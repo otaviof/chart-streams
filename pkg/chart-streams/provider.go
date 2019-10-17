@@ -117,21 +117,22 @@ func getChartVersion(wt *git.Worktree, chartPath string) string {
 }
 
 func (gs *StreamChartProvider) GetHashForChartVersion(name string, version string) *plumbing.Hash {
-	if v, ok := gs.chartNameVersionCommitMap[version]; ok {
-		return &v
+	chartNameVersion := fmt.Sprintf("%s/%s", name, version)
+	if hash, ok := gs.chartNameVersionCommitMap[chartNameVersion]; ok {
+		return &hash
 	}
 	return nil
 }
 
 func (gs *StreamChartProvider) GetChart(name string, version string) (*Package, error) {
-	w, err := gs.gitRepo.r.Worktree()
-	if err != nil {
-		return nil, err
-	}
-
 	hash := gs.GetHashForChartVersion(name, version)
 	if hash == nil {
 		return nil, fmt.Errorf("GetChart(): couldn't find commit hash from specified version")
+	}
+
+	w, err := gs.gitRepo.r.Worktree()
+	if err != nil {
+		return nil, err
 	}
 
 	checkoutErr := w.Checkout(&git.CheckoutOptions{Hash: *hash})
@@ -141,7 +142,7 @@ func (gs *StreamChartProvider) GetChart(name string, version string) (*Package, 
 
 	chartPath := w.Filesystem.Join(defaultChartRelativePath, name)
 
-	p, err := buildChart(w, chartPath)
+	p, err := buildChart(w, chartPath, name)
 	if err != nil {
 		return nil, fmt.Errorf("GetChart(): couldn't build package %s: %s", name, err)
 	}

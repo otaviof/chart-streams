@@ -3,6 +3,8 @@ package chartstreams
 import (
 	"fmt"
 	"os"
+	"path/filepath"
+	"strings"
 
 	"gopkg.in/src-d/go-billy.v4/memfs"
 	git "gopkg.in/src-d/go-git.v4"
@@ -43,12 +45,13 @@ func (g *Git) Clone() error {
 
 const defaultChartRelativePath = "stable"
 
-func buildChart(wt *git.Worktree, chartPath string) (*Package, error) {
+func buildChart(wt *git.Worktree, chartPath string, chartName string) (*Package, error) {
 
-	p := &Package{}
+	p := NewPackage()
+	defer p.Close()
 
-	walkErr := worktree.Walk(wt, chartPath, func(wt *git.Worktree, path string, info os.FileInfo, err error) error {
-		if info.IsDir() {
+	walkErr := worktree.Walk(wt, chartPath, func(wt *git.Worktree, path string, fileInfo os.FileInfo, err error) error {
+		if fileInfo.IsDir() {
 			return nil
 		}
 
@@ -58,11 +61,15 @@ func buildChart(wt *git.Worktree, chartPath string) (*Package, error) {
 		}
 		defer f.Close()
 
-		if !info.Mode().IsRegular() {
+		if !fileInfo.Mode().IsRegular() {
 			return nil
 		}
 
-		p.Add(chartPath, info, f)
+		path = filepath.Join(chartName, strings.TrimPrefix(path, chartPath))
+
+		if err := p.Add(path, fileInfo, f); err != nil {
+			return err
+		}
 
 		return nil
 	})
@@ -70,8 +77,6 @@ func buildChart(wt *git.Worktree, chartPath string) (*Package, error) {
 	if walkErr != nil {
 		return nil, walkErr
 	}
-
-	// fmt.Printf("chart path: %s, chart files: %v\n\n", chartPath, chart.GetFiles())
 
 	return p, nil
 }

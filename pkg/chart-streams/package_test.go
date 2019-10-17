@@ -26,9 +26,7 @@ func TestPackage_Add(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			p := &Package{
-				content: tt.fields.content,
-			}
+			p := &Package{}
 			if err := p.Add(tt.args.path, tt.args.info, tt.args.r); (err != nil) != tt.wantErr {
 				t.Errorf("Package.Add() error = %v, wantErr %v", err, tt.wantErr)
 			}

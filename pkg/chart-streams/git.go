@@ -9,12 +9,6 @@ import (
 	"gopkg.in/src-d/go-git.v4/storage/memory"
 )
 
-type Commit map[string]string
-
-type CommitIter interface {
-	ForEach(func(*Commit) error) error
-}
-
 type Git struct {
 	config *Config
 	r      *git.Repository

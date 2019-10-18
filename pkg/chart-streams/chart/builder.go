@@ -82,7 +82,7 @@ func (cb *ChartBuilder) Build() (*Package, error) {
 
 	tw.Close()
 	gzw.Close()
-	// bw.Flush()
+	bw.Flush()
 
 	if walkErr != nil {
 		return nil, walkErr

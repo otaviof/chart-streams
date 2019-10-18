@@ -10,26 +10,13 @@ import (
 	"os"
 )
 
-// Package wraps the Helm Chart archive.
+// Package wraps the Helm Chart archive, which consists of chart files in a given directory packaged
+// as a tarball.
 type Package struct {
-	bytesBuffer *bytes.Buffer
-	bytesWriter *bufio.Writer
-	gzWriter    *gzip.Writer
-	tarWriter   *tar.Writer
-}
-
-func NewPackage() *Package {
-	b := bytes.NewBuffer([]byte{})
-	bw := bufio.NewWriter(b)
-	gzw := gzip.NewWriter(bw)
-	tw := tar.NewWriter(gzw)
-
-	return &Package{
-		bytesBuffer: b,
-		bytesWriter: bw,
-		gzWriter:    gzw,
-		tarWriter:   tw,
-	}
+	bytesBuffer *bytes.Buffer // package content
+	bytesWriter *bufio.Writer // content buffer writer
+	gzWriter    *gzip.Writer  // gzip writer
+	tarWriter   *tar.Writer   // tar writer
 }
 
 // Read reads the Helm Chart archive bytes.
@@ -38,6 +25,7 @@ func (p *Package) Read(buf []byte) (int, error) {
 	return p.bytesBuffer.Read(buf)
 }
 
+// Close tar and gzip writter, after flushing.
 func (p *Package) Close() {
 	p.tarWriter.Flush()
 	p.tarWriter.Close()
@@ -48,7 +36,6 @@ func (p *Package) Close() {
 
 // Add adds the contents of the given reader in the archive.
 func (p *Package) Add(path string, fileInfo os.FileInfo, r io.Reader) error {
-
 	header, err := tar.FileInfoHeader(fileInfo, fileInfo.Name())
 	if err != nil {
 		return err
@@ -74,9 +61,21 @@ func (p *Package) Add(path string, fileInfo os.FileInfo, r io.Reader) error {
 		return err
 	}
 
-	if _, err = p.tarWriter.Write(b); err != nil {
-		return err
-	}
+	_, err = p.tarWriter.Write(b)
+	return err
+}
 
-	return nil
+// NewPackage instantiate Package type.
+func NewPackage() *Package {
+	b := bytes.NewBuffer([]byte{})
+	bw := bufio.NewWriter(b)
+	gzw := gzip.NewWriter(bw)
+	tw := tar.NewWriter(gzw)
+
+	return &Package{
+		bytesBuffer: b,
+		bytesWriter: bw,
+		gzWriter:    gzw,
+		tarWriter:   tw,
+	}
 }

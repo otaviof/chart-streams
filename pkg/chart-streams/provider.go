@@ -146,14 +146,12 @@ func (gs *StreamChartProvider) GetChart(name string, version string) (*chart.Pac
 
 	chartPath := w.Filesystem.Join(defaultChartRelativePath, name)
 
-	cb := &chart.ChartBuilder{
-		Filesystem: w.Filesystem,
-		ChartPath:  chartPath,
-		ChartName:  name,
-		CommitTime: mapping.Time,
-	}
-
-	p, err := cb.Build()
+	p, err := chart.
+		NewBillyChartBuilder(w.Filesystem).
+		SetChartName(name).
+		SetChartPath(chartPath).
+		SetCommitTime(mapping.Time).
+		Build()
 	if err != nil {
 		return nil, fmt.Errorf("GetChart(): couldn't build package %s: %s", name, err)
 	}

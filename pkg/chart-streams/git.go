@@ -2,16 +2,11 @@ package chartstreams
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
-	"strings"
 
 	"gopkg.in/src-d/go-billy.v4/memfs"
 	git "gopkg.in/src-d/go-git.v4"
 	"gopkg.in/src-d/go-git.v4/plumbing/object"
 	"gopkg.in/src-d/go-git.v4/storage/memory"
-
-	"github.com/otaviof/chart-streams/pkg/chart-streams/worktree"
 )
 
 type Commit map[string]string
@@ -43,40 +38,6 @@ func (g *Git) Clone() error {
 }
 
 const defaultChartRelativePath = "stable"
-
-func buildChart(wt *git.Worktree, chartPath string, chartName string) (*Package, error) {
-
-	p := NewPackage()
-	defer p.Close()
-
-	walkErr := worktree.Walk(wt, chartPath, func(wt *git.Worktree, path string, fileInfo os.FileInfo, err error) error {
-
-		archivePath := filepath.Join(chartName, strings.TrimPrefix(path, chartPath))
-
-		if fileInfo.IsDir() {
-			// Do not include an io.Reader if it is a directory.
-			return p.Add(archivePath, fileInfo, nil)
-		}
-
-		f, openErr := wt.Filesystem.Open(path)
-		if openErr != nil {
-			return openErr
-		}
-		defer f.Close()
-
-		if err := p.Add(archivePath, fileInfo, f); err != nil {
-			return err
-		}
-
-		return nil
-	})
-
-	if walkErr != nil {
-		return nil, walkErr
-	}
-
-	return p, nil
-}
 
 func (g *Git) AllCommits() (object.CommitIter, error) {
 	ref, err := g.r.Head()

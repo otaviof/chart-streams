@@ -4,34 +4,44 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"time"
 
 	git "gopkg.in/src-d/go-git.v4"
 	"gopkg.in/src-d/go-git.v4/plumbing"
 	"k8s.io/helm/pkg/chartutil"
 	repo "k8s.io/helm/pkg/repo"
+
+	"github.com/otaviof/chart-streams/pkg/chart-streams/chart"
 )
 
 type ChartProvider interface {
 	Initialize() error
-	GetChart(name, version string) (*Package, error)
+	GetChart(name, version string) (*chart.Package, error)
 	GetIndexFile() (*repo.IndexFile, error)
+}
+
+type ChartNameVersionCommitMap struct {
+	Time time.Time
+	Hash plumbing.Hash
 }
 
 type StreamChartProvider struct {
 	config                    *Config
 	gitRepo                   *Git
 	index                     *repo.IndexFile
-	chartNameVersionCommitMap map[string]plumbing.Hash
+	chartNameVersionCommitMap map[string]ChartNameVersionCommitMap
 }
 
 func (gs *StreamChartProvider) GetIndexFile() (*repo.IndexFile, error) {
 	return gs.index, nil
 }
 
-func (gs *StreamChartProvider) AddVersionMapping(name, version string, hash plumbing.Hash) {
+func (gs *StreamChartProvider) AddVersionMapping(name, version string, hash plumbing.Hash, t time.Time) {
 	chartNameVersion := fmt.Sprintf("%s/%s", name, version)
-
-	gs.chartNameVersionCommitMap[chartNameVersion] = hash
+	gs.chartNameVersionCommitMap[chartNameVersion] = ChartNameVersionCommitMap{
+		Time: t,
+		Hash: hash,
+	}
 }
 
 func getChartVersion(wt *git.Worktree, chartPath string) string {
@@ -103,24 +113,24 @@ func (gs *StreamChartProvider) Initialize() error {
 			chartPath := w.Filesystem.Join(defaultChartRelativePath, chartName)
 			chartVersion := getChartVersion(w, chartPath)
 
-			gs.AddVersionMapping(chartName, chartVersion, c.Hash)
+			gs.AddVersionMapping(chartName, chartVersion, c.Hash, c.Committer.When)
 		}
 	}
 
 	return nil
 }
 
-func (gs *StreamChartProvider) GetHashForChartVersion(name string, version string) *plumbing.Hash {
+func (gs *StreamChartProvider) GetChartVersionMapping(name string, version string) *ChartNameVersionCommitMap {
 	chartNameVersion := fmt.Sprintf("%s/%s", name, version)
-	if hash, ok := gs.chartNameVersionCommitMap[chartNameVersion]; ok {
-		return &hash
+	if m, ok := gs.chartNameVersionCommitMap[chartNameVersion]; ok {
+		return &m
 	}
 	return nil
 }
 
-func (gs *StreamChartProvider) GetChart(name string, version string) (*Package, error) {
-	hash := gs.GetHashForChartVersion(name, version)
-	if hash == nil {
+func (gs *StreamChartProvider) GetChart(name string, version string) (*chart.Package, error) {
+	mapping := gs.GetChartVersionMapping(name, version)
+	if mapping == nil {
 		return nil, fmt.Errorf("GetChart(): couldn't find commit hash from specified version")
 	}
 
@@ -129,14 +139,21 @@ func (gs *StreamChartProvider) GetChart(name string, version string) (*Package, 
 		return nil, err
 	}
 
-	checkoutErr := w.Checkout(&git.CheckoutOptions{Hash: *hash})
+	checkoutErr := w.Checkout(&git.CheckoutOptions{Hash: mapping.Hash})
 	if checkoutErr != nil {
 		return nil, checkoutErr
 	}
 
 	chartPath := w.Filesystem.Join(defaultChartRelativePath, name)
 
-	p, err := buildChart(w, chartPath, name)
+	cb := &chart.ChartBuilder{
+		Filesystem: w.Filesystem,
+		ChartPath:  chartPath,
+		ChartName:  name,
+		CommitTime: mapping.Time,
+	}
+
+	p, err := cb.Build()
 	if err != nil {
 		return nil, fmt.Errorf("GetChart(): couldn't build package %s: %s", name, err)
 	}
@@ -148,6 +165,6 @@ func NewStreamChartProvider(config *Config) *StreamChartProvider {
 	return &StreamChartProvider{
 		config:                    config,
 		gitRepo:                   NewGit(config),
-		chartNameVersionCommitMap: make(map[string]plumbing.Hash),
+		chartNameVersionCommitMap: make(map[string]ChartNameVersionCommitMap),
 	}
 }

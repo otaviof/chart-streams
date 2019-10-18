@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	log "github.com/sirupsen/logrus"
 
 	cs "github.com/otaviof/chart-streams/pkg/chart-streams"
 )
@@ -35,6 +36,7 @@ func runServeCmd(cmd *cobra.Command, args []string) {
 		ListenAddr: viper.GetString("listen-addr"),
 	}
 
+	log.Printf("Starting server with config: '%#v'", config)
 	s := cs.NewServer(config)
 	if err := s.Start(); err != nil {
 		panic(err)

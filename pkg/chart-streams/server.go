@@ -3,8 +3,11 @@ package chartstreams
 import (
 	"net/http"
 	"strings"
+	"time"
 
+	"github.com/gin-gonic/contrib/ginrus"
 	"github.com/gin-gonic/gin"
+	log "github.com/sirupsen/logrus"
 )
 
 // ChartStreamServer represents the chart-streams server offering its API. The server puts together
@@ -51,7 +54,9 @@ func (s *ChartStreamServer) DirectLinkHandler(c *gin.Context) {
 // listen on configured address, after adding the route handlers to the framework. It can return
 // errors coming from Gin.
 func (s *ChartStreamServer) listen() error {
-	g := gin.Default()
+	g := gin.New()
+
+	g.Use(ginrus.Ginrus(log.StandardLogger(), time.RFC3339, true))
 
 	g.GET("/index.yaml", s.IndexHandler)
 	g.GET("/chart/:name/*version", s.DirectLinkHandler)

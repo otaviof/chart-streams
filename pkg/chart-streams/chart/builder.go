@@ -2,10 +2,10 @@ package chart
 
 import "time"
 
-// ChartBuilder provides a fluent interface to build charts.
-type ChartBuilder interface {
+// Builder provides a fluent interface to build charts.
+type Builder interface {
 	Build() (*Package, error)
-	SetChartName(string) ChartBuilder
-	SetChartPath(string) ChartBuilder
-	SetCommitTime(time.Time) ChartBuilder
+	SetChartName(string) Builder
+	SetChartPath(string) Builder
+	SetCommitTime(time.Time) Builder
 }

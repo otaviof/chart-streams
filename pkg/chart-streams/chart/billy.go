@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	billy "gopkg.in/src-d/go-billy.v4"
+	"gopkg.in/src-d/go-billy.v4"
 
 	"github.com/otaviof/chart-streams/pkg/billyutil"
 )
@@ -22,24 +22,24 @@ type billyChartBuilder struct {
 	CommitTime *time.Time
 }
 
-var _ ChartBuilder = &billyChartBuilder{}
+var _ Builder = &billyChartBuilder{}
 
 // NewBillyChartBuilder builds charts with content stored in billy filesystem.
-func NewBillyChartBuilder(fs billy.Filesystem) ChartBuilder {
+func NewBillyChartBuilder(fs billy.Filesystem) Builder {
 	return &billyChartBuilder{Filesystem: fs}
 }
 
-func (cb *billyChartBuilder) SetChartName(n string) ChartBuilder {
+func (cb *billyChartBuilder) SetChartName(n string) Builder {
 	cb.ChartName = &n
 	return cb
 }
 
-func (cb *billyChartBuilder) SetChartPath(p string) ChartBuilder {
+func (cb *billyChartBuilder) SetChartPath(p string) Builder {
 	cb.ChartPath = &p
 	return cb
 }
 
-func (cb *billyChartBuilder) SetCommitTime(t time.Time) ChartBuilder {
+func (cb *billyChartBuilder) SetCommitTime(t time.Time) Builder {
 	cb.CommitTime = &t
 	return cb
 }

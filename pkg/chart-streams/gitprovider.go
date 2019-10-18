@@ -17,8 +17,8 @@ type commitInfo struct {
 	Hash plumbing.Hash
 }
 
-// StreamChartProvider provides Helm charts from a specified Git repository.
-type StreamChartProvider struct {
+// GitChartProvider provides Helm charts from a specified Git repository.
+type GitChartProvider struct {
 	config                    *Config
 	gitRepo                   *Git
 	index                     *repo.IndexFile
@@ -26,12 +26,12 @@ type StreamChartProvider struct {
 }
 
 // GetIndexFile returns the Helm server index file based on its Git repository contents.
-func (gs *StreamChartProvider) GetIndexFile() (*repo.IndexFile, error) {
+func (gs *GitChartProvider) GetIndexFile() (*repo.IndexFile, error) {
 	return gs.index, nil
 }
 
 // AddVersionMapping maps a specific chart version with a commit hash and commit time.
-func (gs *StreamChartProvider) AddVersionMapping(name, version string, hash plumbing.Hash, t time.Time) {
+func (gs *GitChartProvider) AddVersionMapping(name, version string, hash plumbing.Hash, t time.Time) {
 	chartNameVersion := fmt.Sprintf("%s/%s", name, version)
 	gs.chartNameVersionCommitMap[chartNameVersion] = commitInfo{
 		Time: t,
@@ -71,7 +71,7 @@ func getChartVersion(wt *git.Worktree, chartPath string) string {
 }
 
 // Initialize clones a Git repository and harvests, for each commit, Helm charts and their versions.
-func (gs *StreamChartProvider) Initialize() error {
+func (gs *GitChartProvider) Initialize() error {
 	gs.index = repo.NewIndexFile()
 
 	if err := gs.gitRepo.Clone(); err != nil {
@@ -117,7 +117,7 @@ func (gs *StreamChartProvider) Initialize() error {
 	return nil
 }
 
-func (gs *StreamChartProvider) GetChartVersionMapping(name string, version string) *commitInfo {
+func (gs *GitChartProvider) GetChartVersionMapping(name string, version string) *commitInfo {
 	chartNameVersion := fmt.Sprintf("%s/%s", name, version)
 	if m, ok := gs.chartNameVersionCommitMap[chartNameVersion]; ok {
 		return &m
@@ -125,7 +125,7 @@ func (gs *StreamChartProvider) GetChartVersionMapping(name string, version strin
 	return nil
 }
 
-func (gs *StreamChartProvider) GetChart(name string, version string) (*chart.Package, error) {
+func (gs *GitChartProvider) GetChart(name string, version string) (*chart.Package, error) {
 	mapping := gs.GetChartVersionMapping(name, version)
 	if mapping == nil {
 		return nil, fmt.Errorf("GetChart(): couldn't find commit hash from specified version")
@@ -155,8 +155,8 @@ func (gs *StreamChartProvider) GetChart(name string, version string) (*chart.Pac
 	return p, nil
 }
 
-func NewStreamChartProvider(config *Config) *StreamChartProvider {
-	return &StreamChartProvider{
+func NewStreamChartProvider(config *Config) *GitChartProvider {
+	return &GitChartProvider{
 		config:                    config,
 		gitRepo:                   NewGit(config),
 		chartNameVersionCommitMap: make(map[string]commitInfo),

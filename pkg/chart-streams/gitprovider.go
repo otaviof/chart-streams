@@ -5,7 +5,6 @@ import (
 	"github.com/otaviof/chart-streams/pkg/chart-streams/chart"
 	"gopkg.in/src-d/go-git.v4"
 	"gopkg.in/src-d/go-git.v4/plumbing"
-	"io"
 	"io/ioutil"
 	"k8s.io/helm/pkg/chartutil"
 	"k8s.io/helm/pkg/repo"
@@ -21,22 +20,13 @@ type commitInfo struct {
 type GitChartProvider struct {
 	config                    *Config
 	gitRepository             *GitChartRepository
-	index                     *repo.IndexFile
+	indexFile                 *repo.IndexFile
 	chartNameVersionCommitMap map[string]commitInfo
 }
 
 // GetIndexFile returns the Helm server index file based on its Git repository contents.
 func (gs *GitChartProvider) GetIndexFile() (*repo.IndexFile, error) {
-	return gs.index, nil
-}
-
-// AddVersionMapping maps a specific chart version with a commit hash and commit time.
-func (gs *GitChartProvider) AddVersionMapping(name, version string, hash plumbing.Hash, t time.Time) {
-	chartNameVersion := fmt.Sprintf("%s/%s", name, version)
-	gs.chartNameVersionCommitMap[chartNameVersion] = commitInfo{
-		Time: t,
-		Hash: hash,
-	}
+	return gs.indexFile, nil
 }
 
 // getChartVersion returns the version of a chart in the current Git repository work tree.
@@ -55,7 +45,9 @@ func getChartVersion(wt *git.Worktree, chartPath string) string {
 	if err != nil {
 		return ""
 	}
-	defer chartYamlFile.Close()
+	defer func() {
+		_ = chartYamlFile.Close()
+	}()
 
 	b, err := ioutil.ReadAll(chartYamlFile)
 	if err != nil {
@@ -72,46 +64,13 @@ func getChartVersion(wt *git.Worktree, chartPath string) string {
 
 // Initialize clones a Git repository and harvests, for each commit, Helm charts and their versions.
 func (gs *GitChartProvider) Initialize() error {
-	gs.index = repo.NewIndexFile()
 
-	if err := gs.gitRepository.Clone(); err != nil {
-		return fmt.Errorf("Initialize(): error cloning the repository: %s", err)
+	if err := gs.initializeRepository(); err != nil {
+		return err
 	}
 
-	commitIter, err := gs.gitRepository.AllCommits()
-	if err != nil {
-		return fmt.Errorf("Initialize(): error getting commit iterator: %s", err)
-	}
-	defer commitIter.Close()
-
-	for {
-		c, err := commitIter.Next()
-		if err != nil && err != io.EOF {
-			break
-		}
-
-		w, err := gs.gitRepository.r.Worktree()
-		if err != nil {
-			return err
-		}
-
-		checkoutErr := w.Checkout(&git.CheckoutOptions{Hash: c.Hash})
-		if checkoutErr != nil {
-			return checkoutErr
-		}
-
-		chartDirEntries, readDirErr := w.Filesystem.ReadDir(defaultChartRelativePath)
-		if readDirErr != nil {
-			return readDirErr
-		}
-
-		for _, entry := range chartDirEntries {
-			chartName := entry.Name()
-			chartPath := w.Filesystem.Join(defaultChartRelativePath, chartName)
-			chartVersion := getChartVersion(w, chartPath)
-
-			gs.AddVersionMapping(chartName, chartVersion, c.Hash, c.Committer.When)
-		}
+	if err := gs.buildIndexFile(); err != nil {
+		return err
 	}
 
 	return nil
@@ -153,6 +112,19 @@ func (gs *GitChartProvider) GetChart(name string, version string) (*chart.Packag
 	}
 
 	return p, nil
+}
+
+func (gs *GitChartProvider) buildIndexFile() error {
+	var err error
+	gs.indexFile, err =
+		NewGitChartIndexBuilder(gs.gitRepository).
+			SetBasePath(defaultChartRelativePath).
+			Build()
+	return err
+}
+
+func (gs *GitChartProvider) initializeRepository() error {
+	return gs.gitRepository.Clone()
 }
 
 func NewStreamChartProvider(config *Config) *GitChartProvider {

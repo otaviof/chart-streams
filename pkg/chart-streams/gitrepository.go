@@ -9,12 +9,12 @@ import (
 	"gopkg.in/src-d/go-git.v4/storage/memory"
 )
 
-type Git struct {
+type GitChartRepository struct {
 	config *Config
 	r      *git.Repository
 }
 
-func (g *Git) Clone() error {
+func (g *GitChartRepository) Clone() error {
 	var err error
 	storage := memory.NewStorage()
 	fs := memfs.New()
@@ -33,7 +33,7 @@ func (g *Git) Clone() error {
 
 const defaultChartRelativePath = "stable"
 
-func (g *Git) AllCommits() (object.CommitIter, error) {
+func (g *GitChartRepository) AllCommits() (object.CommitIter, error) {
 	ref, err := g.r.Head()
 	if err != nil {
 		return nil, fmt.Errorf("AllCommits: error finding Head reference: %s", err)
@@ -47,6 +47,6 @@ func (g *Git) AllCommits() (object.CommitIter, error) {
 	return commitIter, nil
 }
 
-func NewGit(config *Config) *Git {
-	return &Git{config: config}
+func NewGitChartRepository(config *Config) *GitChartRepository {
+	return &GitChartRepository{config: config}
 }

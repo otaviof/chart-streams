@@ -20,7 +20,7 @@ type commitInfo struct {
 // GitChartProvider provides Helm charts from a specified Git repository.
 type GitChartProvider struct {
 	config                    *Config
-	gitRepo                   *Git
+	gitRepository             *GitChartRepository
 	index                     *repo.IndexFile
 	chartNameVersionCommitMap map[string]commitInfo
 }
@@ -74,11 +74,11 @@ func getChartVersion(wt *git.Worktree, chartPath string) string {
 func (gs *GitChartProvider) Initialize() error {
 	gs.index = repo.NewIndexFile()
 
-	if err := gs.gitRepo.Clone(); err != nil {
+	if err := gs.gitRepository.Clone(); err != nil {
 		return fmt.Errorf("Initialize(): error cloning the repository: %s", err)
 	}
 
-	commitIter, err := gs.gitRepo.AllCommits()
+	commitIter, err := gs.gitRepository.AllCommits()
 	if err != nil {
 		return fmt.Errorf("Initialize(): error getting commit iterator: %s", err)
 	}
@@ -90,7 +90,7 @@ func (gs *GitChartProvider) Initialize() error {
 			break
 		}
 
-		w, err := gs.gitRepo.r.Worktree()
+		w, err := gs.gitRepository.r.Worktree()
 		if err != nil {
 			return err
 		}
@@ -131,7 +131,7 @@ func (gs *GitChartProvider) GetChart(name string, version string) (*chart.Packag
 		return nil, fmt.Errorf("GetChart(): couldn't find commit hash from specified version")
 	}
 
-	w, err := gs.gitRepo.r.Worktree()
+	w, err := gs.gitRepository.r.Worktree()
 	if err != nil {
 		return nil, err
 	}
@@ -158,7 +158,7 @@ func (gs *GitChartProvider) GetChart(name string, version string) (*chart.Packag
 func NewStreamChartProvider(config *Config) *GitChartProvider {
 	return &GitChartProvider{
 		config:                    config,
-		gitRepo:                   NewGit(config),
+		gitRepository:             NewGitChartRepository(config),
 		chartNameVersionCommitMap: make(map[string]commitInfo),
 	}
 }

@@ -22,14 +22,31 @@ type GitChartProvider struct {
 	index                     *index.Index
 }
 
+var _ ChartProvider = &GitChartProvider{}
+
 // GetIndexFile returns the Helm server index file based on its Git repository contents.
 func (gs *GitChartProvider) GetIndexFile() (*helmrepo.IndexFile, error) {
 	return gs.index.IndexFile, nil
 }
 
+func (gs *GitChartProvider) initializeRepository() error {
+	var err error
+	gs.gitRepository, err = repo.NewGitChartRepository(gs.config)
+	return err
+
+}
+
+func (gs *GitChartProvider) buildIndexFile() error {
+	var err error
+	gs.index, err =
+		index.NewGitChartIndexBuilder(gs.gitRepository).
+			SetBasePath(defaultChartRelativePath).
+			Build()
+	return err
+}
+
 // Initialize clones a Git repository and harvests, for each commit, Helm charts and their versions.
 func (gs *GitChartProvider) Initialize() error {
-
 	if err := gs.initializeRepository(); err != nil {
 		return err
 	}
@@ -41,6 +58,7 @@ func (gs *GitChartProvider) Initialize() error {
 	return nil
 }
 
+// GetChart returns a chart Package for the given chart name and version.
 func (gs *GitChartProvider) GetChart(name string, version string) (*chart.Package, error) {
 	mapping := gs.index.GetChartVersionMapping(name, version)
 	if mapping == nil {
@@ -71,22 +89,7 @@ func (gs *GitChartProvider) GetChart(name string, version string) (*chart.Packag
 	return p, nil
 }
 
-func (gs *GitChartProvider) buildIndexFile() error {
-	var err error
-	gs.index, err =
-		index.NewGitChartIndexBuilder(gs.gitRepository).
-			SetBasePath(defaultChartRelativePath).
-			Build()
-	return err
-}
-
-func (gs *GitChartProvider) initializeRepository() error {
-	var err error
-	gs.gitRepository, err = repo.NewGitChartRepository(gs.config)
-	return err
-
-}
-
+// NewGitChartProvider returns an chart provider that can build and index charts from a Git repository.
 func NewGitChartProvider(config *config.Config) *GitChartProvider {
 	return &GitChartProvider{
 		config:                    config,

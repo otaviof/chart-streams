@@ -49,7 +49,7 @@ func NewGitChartRepository(config *config.Config) (*GitChartRepository, error) {
 	})
 
 	if err != nil {
-		return nil, fmt.Errorf("Clone(): error cloning the repository")
+		return nil, fmt.Errorf("error cloning the repository: %w", err)
 	}
 
 	return &GitChartRepository{r, config}, nil

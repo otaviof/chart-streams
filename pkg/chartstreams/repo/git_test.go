@@ -14,6 +14,8 @@ func TestNewGitChartRepository(t *testing.T) {
 	}{
 		{name: "existing remote repository", repoURL: "https://github.com/helm/charts.git", shouldFail: false},
 		{name: "non-existing remote repository", repoURL: "https://example.com/charts.git", shouldFail: true},
+		{name: "non-existing local repository", repoURL: "/tmp/non-existing.git", shouldFail: true},
+		{name: "existing local repository", repoURL: "/tmp/existing.git", shouldFail: false},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -21,11 +23,11 @@ func TestNewGitChartRepository(t *testing.T) {
 			_, err := NewGitChartRepository(cfg)
 
 			if test.shouldFail && err == nil {
-				t.Fail()
+				t.Error("operation should fail but did not")
 			}
 
 			if !test.shouldFail && err != nil {
-				t.Fail()
+				t.Errorf("operation should not fail, but did: %s", err)
 			}
 		})
 	}

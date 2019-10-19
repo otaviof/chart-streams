@@ -8,13 +8,16 @@ import (
 	"github.com/gin-gonic/contrib/ginrus"
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
+
+	"github.com/otaviof/chart-streams/pkg/chartstreams/config"
+	"github.com/otaviof/chart-streams/pkg/chartstreams/provider"
 )
 
-// ChartStreamServer represents the chart-streams server offering its API. The server puts together
+// ChartStreamServer represents the chartstreams server offering its API. The server puts together
 // the routes, and bootstrap steps in order to respond as a valid Helm repository.
 type ChartStreamServer struct {
-	config        *Config
-	chartProvider ChartProvider
+	config        *config.Config
+	chartProvider provider.ChartProvider
 }
 
 // Start executes the boostrap steps in order to start listening on configured address. It can return
@@ -65,8 +68,8 @@ func (s *ChartStreamServer) listen() error {
 }
 
 // NewServer instantiate a new server instance.
-func NewServer(config *Config) *ChartStreamServer {
-	p := NewStreamChartProvider(config)
+func NewServer(config *config.Config) *ChartStreamServer {
+	p := provider.NewGitChartProvider(config)
 	return &ChartStreamServer{
 		config:        config,
 		chartProvider: p,

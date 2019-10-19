@@ -1,9 +1,9 @@
-package chartstreams
+package provider
 
 import (
 	"k8s.io/helm/pkg/repo"
 
-	"github.com/otaviof/chart-streams/pkg/chart-streams/chart"
+	"github.com/otaviof/chart-streams/pkg/chartstreams/chart"
 )
 
 type ChartProvider interface {

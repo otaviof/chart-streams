@@ -10,13 +10,13 @@ import (
 	"github.com/spf13/viper"
 )
 
-const appName = "chart-streams"
+const appName = "chartstreams"
 
 // rootCmd main command.
 var rootCmd = &cobra.Command{
 	Use:   appName,
 	Short: "Helm-Charts server backed by Git",
-	Long: `## chart-streams
+	Long: `## chartstreams
 
 A Helm-Charts server using Git as a backend with semantic version support.
 

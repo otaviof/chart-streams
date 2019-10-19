@@ -1,11 +1,12 @@
 package main
 
 import (
+	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	log "github.com/sirupsen/logrus"
 
-	cs "github.com/otaviof/chart-streams/pkg/chart-streams"
+	"github.com/otaviof/chart-streams/pkg/chartstreams"
+	"github.com/otaviof/chart-streams/pkg/chartstreams/config"
 )
 
 // serveCmd sub-command to represent the server.
@@ -28,16 +29,16 @@ func init() {
 	bindViperFlags(flags)
 }
 
-// runServeCmd execute chart-streams server.
+// runServeCmd execute chartstreams server.
 func runServeCmd(cmd *cobra.Command, args []string) {
-	config := &cs.Config{
+	cfg := &config.Config{
 		Depth:      viper.GetInt("clone-depth"),
 		RepoURL:    viper.GetString("repo-url"),
 		ListenAddr: viper.GetString("listen-addr"),
 	}
 
-	log.Printf("Starting server with config: '%#v'", config)
-	s := cs.NewServer(config)
+	log.Printf("Starting server with config: '%#v'", cfg)
+	s := chartstreams.NewServer(cfg)
 	if err := s.Start(); err != nil {
 		panic(err)
 	}

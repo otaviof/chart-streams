@@ -1,4 +1,4 @@
-package chartstreams
+package config
 
 type Config struct {
 	RepoURL    string // git repository URL

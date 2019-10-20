@@ -1,6 +1,7 @@
 package index
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -27,12 +28,12 @@ type gitChartIndexBuilder struct {
 	basePath                    string
 }
 
-func (ib gitChartIndexBuilder) SetBasePath(basePath string) Builder {
+func (ib *gitChartIndexBuilder) SetBasePath(basePath string) Builder {
 	ib.basePath = basePath
 	return ib
 }
 
-var _ Builder = gitChartIndexBuilder{}
+var _ Builder = &gitChartIndexBuilder{}
 
 func (ib gitChartIndexBuilder) addChartNameVersionToCommitMap(name string, version string, hash plumbing.Hash, t time.Time) {
 	cnv := ChartNameVersion{name: name, version: version}
@@ -43,20 +44,20 @@ func (ib gitChartIndexBuilder) addChartNameVersionToCommitMap(name string, versi
 }
 
 // getChartVersion returns the version of a chart in the current Git repository work tree.
-func getChartVersion(wt *git.Worktree, chartPath string) string {
+func getChartVersion(wt *git.Worktree, chartPath string) (string, error) {
 	chartDirInfo, err := wt.Filesystem.Lstat(chartPath)
 	if err != nil {
-		return ""
+		return "", err
 	}
 
 	if !chartDirInfo.IsDir() {
-		return ""
+		return "", err
 	}
 
 	chartYamlPath := wt.Filesystem.Join(chartPath, "Chart.yaml")
 	chartYamlFile, err := wt.Filesystem.Open(chartYamlPath)
 	if err != nil {
-		return ""
+		return "", err
 	}
 	defer func() {
 		_ = chartYamlFile.Close()
@@ -64,18 +65,20 @@ func getChartVersion(wt *git.Worktree, chartPath string) string {
 
 	b, err := ioutil.ReadAll(chartYamlFile)
 	if err != nil {
-		return ""
+		return "", err
 	}
 
 	chartYaml, err := chartutil.UnmarshalChartfile(b)
 	if err != nil {
-		return ""
+		return "", err
 	}
 
-	return chartYaml.GetVersion()
+	return chartYaml.GetVersion(), nil
 }
 
-func (ib gitChartIndexBuilder) Build() (*Index, error) {
+var ErrChartNotFound = errors.New("chart not found")
+
+func (ib *gitChartIndexBuilder) Build() (*Index, error) {
 	commitIter, err := ib.gitChartRepository.AllCommits()
 	if err != nil {
 		return nil, fmt.Errorf("Initialize(): error getting commit iterator: %s", err)
@@ -106,7 +109,14 @@ func (ib gitChartIndexBuilder) Build() (*Index, error) {
 		for _, entry := range chartDirEntries {
 			chartName := entry.Name()
 			chartPath := w.Filesystem.Join(ib.basePath, chartName)
-			chartVersion := getChartVersion(w, chartPath)
+			chartVersion, err := getChartVersion(w, chartPath)
+			if err != nil {
+				if err != ErrChartNotFound {
+					return nil, err
+				}
+				continue
+			}
+
 			ib.addChartNameVersionToCommitMap(chartName, chartVersion, c.Hash, c.Committer.When)
 		}
 	}

@@ -83,10 +83,13 @@ func (cb *billyChartBuilder) Build() (*Package, error) {
 			if openErr != nil {
 				return openErr
 			}
-			defer f.Close()
 
 			b, err := ioutil.ReadAll(f)
 			if err != nil {
+				return err
+			}
+
+			if err := f.Close(); err != nil {
 				return err
 			}
 
@@ -102,12 +105,20 @@ func (cb *billyChartBuilder) Build() (*Package, error) {
 			return err
 		})
 
-	tw.Close()
-	gzw.Close()
-	bw.Flush()
-
 	if walkErr != nil {
 		return nil, walkErr
+	}
+
+	if err := tw.Close(); err != nil {
+		return nil, err
+	}
+
+	if err := gzw.Close(); err != nil {
+		return nil, err
+	}
+
+	if err := bw.Flush(); err != nil {
+		return nil, err
 	}
 
 	p := &Package{bytesBuffer: b}

@@ -24,7 +24,7 @@ func TestNewGitChartRepository(t *testing.T) {
 		}
 
 		t.Run(test.name, func(t *testing.T) {
-			cfg := &config.Config{Depth: 1, RepoURL: test.repoURL}
+			cfg := &config.Config{RepoURL: test.repoURL, CloneDepth: 1}
 			_, err := NewGitChartRepo(cfg)
 
 			if test.shouldFail && err == nil {

@@ -18,6 +18,7 @@ type Index struct {
 	chartNameVersionToCommitMap map[ChartNameVersion]repo.CommitInfo
 }
 
+// GetChartVersionMapping based on chart name and version, return repository commit information.
 func (i *Index) GetChartVersionMapping(name string, version string) *repo.CommitInfo {
 	chartNameVersion := ChartNameVersion{
 		name:    name,

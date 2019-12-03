@@ -8,6 +8,5 @@ before_script:
 script:
   - make
   - make test
-# TODO: add code coverage on CI runs;
-# after_success:
-#   - make codecov
+after_success:
+  - make codecov

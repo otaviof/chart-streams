@@ -5,11 +5,9 @@
     <a alt="GoReport" href="https://goreportcard.com/report/github.com/otaviof/chart-streams">
         <img alt="GoReport" src="https://goreportcard.com/badge/github.com/otaviof/chart-streams">
     </a>
-<!--
     <a alt="Code Coverage" href="https://codecov.io/gh/otaviof/chart-streams">
         <img alt="Code Coverage" src="https://codecov.io/gh/otaviof/chart-streams/branch/master/graph/badge.svg">
     </a>
-  -->
     <a href="https://godoc.org/github.com/otaviof/chart-streams/pkg/chart-streams">
         <img alt="GoDoc Reference" src="https://godoc.org/github.com/otaviof/chart-streams/pkg/chart-streams?status.svg">
     </a>

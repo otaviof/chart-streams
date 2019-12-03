@@ -25,7 +25,7 @@ func TestNewGitChartRepository(t *testing.T) {
 
 		t.Run(test.name, func(t *testing.T) {
 			cfg := &config.Config{Depth: 1, RepoURL: test.repoURL}
-			_, err := NewGitChartRepository(cfg)
+			_, err := NewGitChartRepo(cfg)
 
 			if test.shouldFail && err == nil {
 				t.Error("operation should fail but did not")

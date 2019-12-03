@@ -12,46 +12,45 @@ import (
 	"github.com/otaviof/chart-streams/pkg/chartstreams/repo"
 )
 
-const defaultChartRelativePath = "stable"
-
 // GitChartProvider provides Helm charts from a specified Git repository.
 type GitChartProvider struct {
-	chartNameVersionCommitMap map[string]repo.CommitInfo
-	config                    *config.Config
-	gitRepository             *repo.GitChartRepository
-	index                     *index.Index
+	versionCommitMap map[string]repo.CommitInfo // mapping of chart version and git commits
+	config           *config.Config             // global configuration
+	gitRepo          *repo.GitChartRepo         // git repository handler
+	index            *index.Index               // chart repository index instance
 }
 
 var _ ChartProvider = &GitChartProvider{}
 
 // GetIndexFile returns the Helm server index file based on its Git repository contents.
-func (gs *GitChartProvider) GetIndexFile() (*helmrepo.IndexFile, error) {
-	return gs.index.IndexFile, nil
+func (g *GitChartProvider) GetIndexFile() (*helmrepo.IndexFile, error) {
+	return g.index.IndexFile, nil
 }
 
-func (gs *GitChartProvider) initializeRepository() error {
+// initializeRepository instantiate a new chart repository.
+func (g *GitChartProvider) initializeRepository() error {
 	var err error
-	gs.gitRepository, err = repo.NewGitChartRepository(gs.config)
+	g.gitRepo, err = repo.NewGitChartRepo(g.config)
 	return err
 
 }
 
-func (gs *GitChartProvider) buildIndexFile() error {
+// buildIndexFile instantiate global index.
+func (g *GitChartProvider) buildIndexFile() error {
 	var err error
-	gs.index, err =
-		index.NewGitChartIndexBuilder(gs.gitRepository).
-			SetBasePath(defaultChartRelativePath).
-			Build()
+	g.index, err = index.NewGitChartIndexBuilder(g.gitRepo).
+		SetBasePath(g.config.RelativeDir).
+		Build()
 	return err
 }
 
 // Initialize clones a Git repository and harvests, for each commit, Helm charts and their versions.
-func (gs *GitChartProvider) Initialize() error {
-	if err := gs.initializeRepository(); err != nil {
+func (g *GitChartProvider) Initialize() error {
+	if err := g.initializeRepository(); err != nil {
 		return err
 	}
 
-	if err := gs.buildIndexFile(); err != nil {
+	if err := g.buildIndexFile(); err != nil {
 		return err
 	}
 
@@ -59,23 +58,23 @@ func (gs *GitChartProvider) Initialize() error {
 }
 
 // GetChart returns a chart Package for the given chart name and version.
-func (gs *GitChartProvider) GetChart(name string, version string) (*chart.Package, error) {
-	mapping := gs.index.GetChartVersionMapping(name, version)
+func (g *GitChartProvider) GetChart(name string, version string) (*chart.Package, error) {
+	mapping := g.index.GetChartVersionMapping(name, version)
 	if mapping == nil {
 		return nil, fmt.Errorf("GetChart(): couldn't find commit hash from specified version")
 	}
 
-	w, err := gs.gitRepository.Worktree()
+	w, err := g.gitRepo.Worktree()
 	if err != nil {
 		return nil, err
 	}
 
-	checkoutErr := w.Checkout(&git.CheckoutOptions{Hash: mapping.Hash})
-	if checkoutErr != nil {
-		return nil, checkoutErr
+	err = w.Checkout(&git.CheckoutOptions{Hash: mapping.Hash})
+	if err != nil {
+		return nil, err
 	}
 
-	chartPath := w.Filesystem.Join(defaultChartRelativePath, name)
+	chartPath := w.Filesystem.Join(g.config.RelativeDir, name)
 
 	p, err := chart.NewBillyChartBuilder(w.Filesystem).
 		SetChartName(name).
@@ -92,7 +91,7 @@ func (gs *GitChartProvider) GetChart(name string, version string) (*chart.Packag
 // NewGitChartProvider returns an chart provider that can build and index charts from a Git repository.
 func NewGitChartProvider(config *config.Config) *GitChartProvider {
 	return &GitChartProvider{
-		config:                    config,
-		chartNameVersionCommitMap: make(map[string]repo.CommitInfo),
+		config:           config,
+		versionCommitMap: make(map[string]repo.CommitInfo),
 	}
 }

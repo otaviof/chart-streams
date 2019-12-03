@@ -23,21 +23,21 @@ type ChartNameVersion struct {
 }
 
 type gitChartIndexBuilder struct {
-	gitChartRepository          *repo.GitChartRepository
-	chartNameVersionToCommitMap map[ChartNameVersion]repo.CommitInfo
-	basePath                    string
+	gitChartRepo     *repo.GitChartRepo
+	versionCommitMap map[ChartNameVersion]repo.CommitInfo
+	basePath         string
 }
 
-func (ib *gitChartIndexBuilder) SetBasePath(basePath string) Builder {
-	ib.basePath = basePath
-	return ib
+func (g *gitChartIndexBuilder) SetBasePath(basePath string) Builder {
+	g.basePath = basePath
+	return g
 }
 
 var _ Builder = &gitChartIndexBuilder{}
 
 func (ib gitChartIndexBuilder) addChartNameVersionToCommitMap(name string, version string, hash plumbing.Hash, t time.Time) {
 	cnv := ChartNameVersion{name: name, version: version}
-	ib.chartNameVersionToCommitMap[cnv] = repo.CommitInfo{
+	ib.versionCommitMap[cnv] = repo.CommitInfo{
 		Time: t,
 		Hash: hash,
 	}
@@ -79,7 +79,7 @@ func getChartVersion(wt *git.Worktree, chartPath string) (string, error) {
 var ErrChartNotFound = errors.New("chart not found")
 
 func (ib *gitChartIndexBuilder) Build() (*Index, error) {
-	commitIter, err := ib.gitChartRepository.AllCommits()
+	commitIter, err := ib.gitChartRepo.AllCommits()
 	if err != nil {
 		return nil, fmt.Errorf("Initialize(): error getting commit iterator: %s", err)
 	}
@@ -91,7 +91,7 @@ func (ib *gitChartIndexBuilder) Build() (*Index, error) {
 			break
 		}
 
-		w, err := ib.gitChartRepository.Worktree()
+		w, err := ib.gitChartRepo.Worktree()
 		if err != nil {
 			return nil, err
 		}
@@ -124,7 +124,7 @@ func (ib *gitChartIndexBuilder) Build() (*Index, error) {
 	indexFile := helmrepo.NewIndexFile()
 
 	var allChartsVersions []ChartNameVersion
-	for k := range ib.chartNameVersionToCommitMap {
+	for k := range ib.versionCommitMap {
 		allChartsVersions = append(allChartsVersions, k)
 	}
 
@@ -149,16 +149,16 @@ func (ib *gitChartIndexBuilder) Build() (*Index, error) {
 
 	file := &Index{
 		IndexFile:                   indexFile,
-		chartNameVersionToCommitMap: ib.chartNameVersionToCommitMap,
+		chartNameVersionToCommitMap: ib.versionCommitMap,
 	}
 
 	return file, nil
 }
 
 // NewGitChartIndexBuilder creates an index builder for GitChartRepository.
-func NewGitChartIndexBuilder(r *repo.GitChartRepository) Builder {
+func NewGitChartIndexBuilder(r *repo.GitChartRepo) Builder {
 	return &gitChartIndexBuilder{
-		gitChartRepository:          r,
-		chartNameVersionToCommitMap: map[ChartNameVersion]repo.CommitInfo{},
+		gitChartRepo:     r,
+		versionCommitMap: map[ChartNameVersion]repo.CommitInfo{},
 	}
 }

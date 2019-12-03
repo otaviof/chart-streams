@@ -32,8 +32,8 @@ func init() {
 // runServeCmd execute chartstreams server.
 func runServeCmd(cmd *cobra.Command, args []string) {
 	cfg := &config.Config{
-		Depth:      viper.GetInt("clone-depth"),
 		RepoURL:    viper.GetString("repo-url"),
+		CloneDepth: viper.GetInt("clone-depth"),
 		ListenAddr: viper.GetString("listen-addr"),
 	}
 

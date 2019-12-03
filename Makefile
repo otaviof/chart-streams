@@ -4,7 +4,7 @@ RUN_ARGS ?= serve
 COMMON_FLAGS ?= -v -mod=vendor
 
 TEST_TIMEOUT ?= 3m
-TEST_FLAGS ?= -failfast -race -timeout=$(TEST_TIMEOUT)
+TEST_FLAGS ?= -failfast -timeout=$(TEST_TIMEOUT)
 
 OUTPUT_DIR ?= build
 

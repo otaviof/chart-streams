@@ -10,13 +10,92 @@ import (
 	"github.com/otaviof/chart-streams/pkg/chartstreams/config"
 )
 
-func TestNewGitChartRepository(t *testing.T) {
-	tests := []newGitChartRepositoryTestCase{
-		{name: "existing remote repository", repoURL: helmChartsReferenceURL, shouldFail: false},
-		{name: "non-existing remote repository", repoURL: "https://example.com/charts.git", shouldFail: true},
-		newNonExistingLocalRepositoryTestCase(t),
-		newExistingLocalRepositoryTestCase(t),
+type TestCase struct {
+	name       string
+	repoURL    string
+	shouldFail bool
+	preCmd     *func(c *TestCase) error
+	postCmd    *func()
+}
+
+const helmChartsReferenceURL = "https://github.com/helm/charts.git"
+
+func (c *TestCase) PreCmd() error {
+	if c.preCmd != nil {
+		return (*c.preCmd)(c)
 	}
+	return nil
+}
+
+func (c *TestCase) PostCmd() {
+	if c.postCmd != nil {
+		(*c.postCmd)()
+	}
+}
+
+// existingTestCase builds a test case for an existing local repository by creating a directory and
+// cloning a repository into it, and use it as clone source.
+func existingTestCase(t *testing.T) TestCase {
+	repoPath, err := ioutil.TempDir("", "test-new-git-chart-repository-")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	preCmd := func(c *TestCase) error {
+		_, err := git.PlainClone(
+			repoPath,
+			true,
+			&git.CloneOptions{URL: helmChartsReferenceURL},
+		)
+		return err
+	}
+
+	postCmdFn := func() {
+		_ = os.RemoveAll(repoPath)
+	}
+
+	return TestCase{
+		name:       "existing local repository",
+		repoURL:    repoPath,
+		shouldFail: false,
+		preCmd:     &preCmd,
+		postCmd:    &postCmdFn,
+	}
+}
+
+// nonExistingTestCase builds a test case for non existing local repositories by creating and
+// removing a temporary directory and use it as clone source.
+func nonExistingTestCase(t *testing.T) TestCase {
+	repoPath, err := ioutil.TempDir("", "non-existing-local-repository-test-case-")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_ = os.RemoveAll(repoPath)
+
+	return TestCase{
+		name:       "non-existing local repository",
+		repoURL:    repoPath,
+		shouldFail: true,
+	}
+}
+
+func TestNewGitChartRepository(t *testing.T) {
+	tests := []TestCase{
+		{
+			name:       "existing remote repository",
+			repoURL:    helmChartsReferenceURL,
+			shouldFail: false,
+		},
+		{
+			name:       "non-existing remote repository",
+			repoURL:    "https://example.com/charts.git",
+			shouldFail: true,
+		},
+		existingTestCase(t),
+		nonExistingTestCase(t),
+	}
+
 	for _, test := range tests {
 		if err := test.PreCmd(); err != nil {
 			t.Error(err)
@@ -38,71 +117,4 @@ func TestNewGitChartRepository(t *testing.T) {
 
 		test.PostCmd()
 	}
-}
-
-type newGitChartRepositoryTestCase struct {
-	name       string
-	repoURL    string
-	shouldFail bool
-	preCmd     *func(c *newGitChartRepositoryTestCase) error
-	postCmd    *func()
-}
-
-func (c *newGitChartRepositoryTestCase) PreCmd() error {
-	if c.preCmd != nil {
-		return (*c.preCmd)(c)
-	}
-	return nil
-}
-
-func (c *newGitChartRepositoryTestCase) PostCmd() {
-	if c.postCmd != nil {
-		(*c.postCmd)()
-	}
-}
-
-const helmChartsReferenceURL = "https://github.com/helm/charts.git"
-
-// newExistingLocalRepositoryTestCase builds a test case for an existing local repository by creating a directory and
-// cloning a repository into it, and use it as clone source.
-func newExistingLocalRepositoryTestCase(t *testing.T) newGitChartRepositoryTestCase {
-	existingLocalRepositoryPath, err := ioutil.TempDir("", "test-new-git-chart-repository-")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	existingLocalRepositoryPreCmd := func(c *newGitChartRepositoryTestCase) error {
-		_, err := git.PlainClone(existingLocalRepositoryPath, true, &git.CloneOptions{URL: helmChartsReferenceURL})
-		return err
-	}
-
-	cleanupExistingLocalRepositoryCmd := func() {
-		_ = os.RemoveAll(existingLocalRepositoryPath)
-	}
-
-	return newGitChartRepositoryTestCase{
-		name:       "existing local repository",
-		repoURL:    existingLocalRepositoryPath,
-		shouldFail: false,
-		preCmd:     &existingLocalRepositoryPreCmd,
-		postCmd:    &cleanupExistingLocalRepositoryCmd,
-	}
-}
-
-// newNonExistingLocalRepositoryTestCase builds a test case for non existing local repositories by creating and removing
-// a temp directory and use it as clone source.
-func newNonExistingLocalRepositoryTestCase(t *testing.T) newGitChartRepositoryTestCase {
-	nonExistingLocalRepositoryPath, err := ioutil.TempDir("", "non-existing-local-repository-test-case-")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	_ = os.RemoveAll(nonExistingLocalRepositoryPath)
-
-	return newGitChartRepositoryTestCase{
-		name:       "non-existing local repository",
-		repoURL:    nonExistingLocalRepositoryPath,
-		shouldFail: true,
-	}
-
 }

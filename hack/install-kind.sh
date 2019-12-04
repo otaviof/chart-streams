@@ -1,9 +1,9 @@
 #!/bin/bash
 #
-# Deploy kubectl and KinD.
+# Deploy kubectl and KinD, adding configuration to use KinD as the default cluster.
 #
 
-set -e
+set -eu
 
 KUBECTL_VERSION=${KUBECTL_VERSION:-}
 KUBECTL_URL="https://storage.googleapis.com"
@@ -17,15 +17,38 @@ function die () {
     exit 1
 }
 
+#
+# kubectl
+#
+
 [[ -z "${KUBECTL_VERSION}" ]] && die "Can't find KUBECTL_VERSION'!"
 
-# installing kubectl binary
-curl --location --output ${KUBECTL_BIN} ${KUBECTL_URL}/${KUBECTL_URL_PATH}
-chmod +x ${KUBECTL_BIN}
+curl --location --output="${KUBECTL_BIN}" "${KUBECTL_URL}/${KUBECTL_URL_PATH}"
+chmod +x "${KUBECTL_BIN}"
 
-# installing KinD, Kubernetes in Docker
+#
+# KinD
+#
+
 go get sigs.k8s.io/kind
 kind create cluster
 
-# creating kube folder if not found
-[[ ! -d "${HOME}/.kube" ]] && mkdir -v "${HOME}/.kube"
+#
+# Cluster Config
+#
+
+KUBECONFIG_DIR="${HOME}/.kube"
+[[ ! -d "${KUBECONFIG_DIR}" ]] && mkdir -v "${KUBECONFIG_DIR}"
+
+KUBECONFIG_KIND=$(kind get kubeconfig-path)
+[[ ! -f "${KUBECONFIG_KIND}" ]] && die "Can't find kind's kubeconfig at '${KUBECONFIG_KIND}'!"
+
+KUBECONFIG_DEFAULT="${KUBECONFIG_DIR}/config"
+if [[ -f "${KUBECONFIG_DEFAULT}" ]] ; then
+    echo "# Merging configs '${KUBECONFIG_DEFAULT}' and '${KUBECONFIG_KIND}'..."
+    KUBECONFIG="${KUBECONFIG_DEFAULT}:${KUBECONFIG_KIND}" \
+        $KUBECTL_BIN config view --flatten >${KUBECONFIG_DEFAULT}
+else
+    echo "# Copying KinD's kubeconfig '${KUBECONFIG_KIND}' as default..."
+    cp -v "${KUBECONFIG_KIND}" "${KUBECONFIG_DEFAULT}"
+fi

@@ -30,8 +30,8 @@ type gitChartIndexBuilder struct {
 	basePath         string
 }
 
-// ChartNotFoundErr not-found error.
-var ChartNotFoundErr = errors.New("chart not found")
+// ErrChartNotFound not-found error.
+var ErrChartNotFound = errors.New("chart not found")
 
 // SetBasePath set basePath attribute.
 func (g *gitChartIndexBuilder) SetBasePath(basePath string) Builder {
@@ -123,7 +123,7 @@ func (g *gitChartIndexBuilder) Build() (*Index, error) {
 			chartPath := w.Filesystem.Join(g.basePath, chartName)
 			chartVersion, err := getChartVersion(w, chartPath)
 			if err != nil {
-				if err != ChartNotFoundErr {
+				if err != ErrChartNotFound {
 					return nil, err
 				}
 				continue

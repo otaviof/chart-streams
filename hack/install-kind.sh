@@ -37,18 +37,4 @@ kind create cluster
 # Cluster Config
 #
 
-KUBECONFIG_DIR="${HOME}/.kube"
-[[ ! -d "${KUBECONFIG_DIR}" ]] && mkdir -v "${KUBECONFIG_DIR}"
-
-KUBECONFIG_KIND=$(kind get kubeconfig-path)
-[[ ! -f "${KUBECONFIG_KIND}" ]] && die "Can't find kind's kubeconfig at '${KUBECONFIG_KIND}'!"
-
-KUBECONFIG_DEFAULT="${KUBECONFIG_DIR}/config"
-if [[ -f "${KUBECONFIG_DEFAULT}" ]] ; then
-    echo "# Merging configs '${KUBECONFIG_DEFAULT}' and '${KUBECONFIG_KIND}'..."
-    KUBECONFIG="${KUBECONFIG_DEFAULT}:${KUBECONFIG_KIND}" \
-        $KUBECTL_BIN config view --flatten >${KUBECONFIG_DEFAULT}
-else
-    echo "# Copying KinD's kubeconfig '${KUBECONFIG_KIND}' as default..."
-    cp -v "${KUBECONFIG_KIND}" "${KUBECONFIG_DEFAULT}"
-fi
+$KUBECTL_BIN config use-context kind-kind

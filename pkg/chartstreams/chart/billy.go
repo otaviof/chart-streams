@@ -44,62 +44,16 @@ func (cb *billyChartBuilder) SetCommitTime(t time.Time) Builder {
 	return cb
 }
 
+// Build walks the chart directory reading all its artifacts and streaming their contents to a
+// gzip'ed tarball to be delivered to the caller. This method doesn't assume anything other than the
+// available filesystem.
 func (cb *billyChartBuilder) Build() (*Package, error) {
-
 	b := bytes.NewBuffer([]byte{})
 	bw := bufio.NewWriter(b)
 	gzw := gzip.NewWriter(bw)
 	tw := tar.NewWriter(gzw)
 
-	walkErr := billyutil.Walk(
-		cb.Filesystem,
-		*cb.ChartPath,
-		func(fs billy.Filesystem, path string, fileInfo os.FileInfo) error {
-			archivePath := fs.Join(*cb.ChartName, strings.TrimPrefix(path, *cb.ChartPath))
-
-			header, err := tar.FileInfoHeader(fileInfo, fileInfo.Name())
-			if err != nil {
-				return err
-			}
-
-			header.Name = archivePath
-
-			if fileInfo.IsDir() {
-				header.Mode = int64(fileInfo.Mode())
-				header.ModTime = *cb.CommitTime
-				header.Size = fileInfo.Size()
-				return tw.WriteHeader(header)
-			}
-
-			if !fileInfo.Mode().IsRegular() {
-				return nil
-			}
-
-			f, openErr := fs.Open(path)
-			if openErr != nil {
-				return openErr
-			}
-
-			b, err := ioutil.ReadAll(f)
-			if err != nil {
-				return err
-			}
-
-			if err := f.Close(); err != nil {
-				return err
-			}
-
-			header.Mode = int64(fileInfo.Mode())
-			header.ModTime = *cb.CommitTime
-			header.Size = int64(len(b))
-
-			if err := tw.WriteHeader(header); err != nil {
-				return err
-			}
-
-			_, err = tw.Write(b)
-			return err
-		})
+	walkErr := billyutil.Walk(cb.Filesystem, *cb.ChartPath, appendFileToTarWriter(cb, tw))
 
 	if walkErr != nil {
 		return nil, walkErr
@@ -120,4 +74,53 @@ func (cb *billyChartBuilder) Build() (*Package, error) {
 	p := &Package{bytesBuffer: b}
 
 	return p, nil
+}
+
+// appendFileToTarWriter returns a walkFn that appends each file into the given tar writer.
+func appendFileToTarWriter(cb *billyChartBuilder, tw *tar.Writer) billyutil.WalkFn {
+	return func(fs billy.Filesystem, path string, fileInfo os.FileInfo) error {
+		header, err := tar.FileInfoHeader(fileInfo, fileInfo.Name())
+		if err != nil {
+			return err
+		}
+
+		// archive path
+		header.Name = fs.Join(*cb.ChartName, strings.TrimPrefix(path, *cb.ChartPath))
+
+		if fileInfo.IsDir() {
+			header.Mode = int64(fileInfo.Mode())
+			header.ModTime = *cb.CommitTime
+			header.Size = fileInfo.Size()
+			return tw.WriteHeader(header)
+		}
+
+		if !fileInfo.Mode().IsRegular() {
+			return nil
+		}
+
+		f, openErr := fs.Open(path)
+		if openErr != nil {
+			return openErr
+		}
+
+		b, err := ioutil.ReadAll(f)
+		if err != nil {
+			return err
+		}
+
+		if err := f.Close(); err != nil {
+			return err
+		}
+
+		header.Mode = int64(fileInfo.Mode())
+		header.ModTime = *cb.CommitTime
+		header.Size = int64(len(b))
+
+		if err := tw.WriteHeader(header); err != nil {
+			return err
+		}
+
+		_, err = tw.Write(b)
+		return err
+	}
 }

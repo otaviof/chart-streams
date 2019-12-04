@@ -3,7 +3,10 @@ language: go
 go:
   - 1.13.x
 install: true
+services:
+  - docker
 before_script:
+  - make kind
   - make vendor
 script:
   - make

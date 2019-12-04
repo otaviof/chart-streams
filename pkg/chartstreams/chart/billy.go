@@ -54,11 +54,7 @@ func (cb *billyChartBuilder) Build() (*Package, error) {
 	walkErr := billyutil.Walk(
 		cb.Filesystem,
 		*cb.ChartPath,
-		func(fs billy.Filesystem, path string, fileInfo os.FileInfo, err error) error {
-			if err != nil {
-				return err
-			}
-
+		func(fs billy.Filesystem, path string, fileInfo os.FileInfo) error {
 			archivePath := fs.Join(*cb.ChartName, strings.TrimPrefix(path, *cb.ChartPath))
 
 			header, err := tar.FileInfoHeader(fileInfo, fileInfo.Name())

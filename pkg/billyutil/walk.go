@@ -8,25 +8,28 @@ import (
 	billy "gopkg.in/src-d/go-billy.v4"
 )
 
-// WalkFn function to be executed on each commit-id.
-type WalkFn func(fs billy.Filesystem, path string, info os.FileInfo, err error) error
+// WalkFn is executed for each file in the path inside the given filesystem.
+type WalkFn func(fs billy.Filesystem, path string, info os.FileInfo) error
 
-func Walk(fs billy.Filesystem, root string, walkFn WalkFn) error {
-	info, err := fs.Lstat(root)
-	if err != nil {
-		err = walkFn(fs, root, nil, err)
-	} else {
-		err = walk(fs, root, info, walkFn)
+// Walk executes walkFn for each file in the path inside the given filesystem.
+func Walk(fs billy.Filesystem, path string, walkFn WalkFn) error {
+	info, err := fs.Lstat(path)
+	if err == nil {
+		return err
 	}
-	if err == filepath.SkipDir {
-		return nil
+
+	if err = walk(fs, path, info, walkFn); err != nil && err != filepath.SkipDir {
+		return err
 	}
-	return err
+	return nil
 }
 
+// walk recursively executes walkFn for each file starting at the given path inside the given
+// filesystem.
 func walk(fs billy.Filesystem, path string, info os.FileInfo, walkFn WalkFn) error {
+	// execute walkFn right away if path is not a directory (which will be traversed later on)
 	if !info.IsDir() {
-		return walkFn(fs, path, info, nil)
+		return walkFn(fs, path, info)
 	}
 
 	names, err := readDirNames(fs, path)
@@ -34,28 +37,17 @@ func walk(fs billy.Filesystem, path string, info os.FileInfo, walkFn WalkFn) err
 		return err
 	}
 
-	if err = walkFn(fs, path, info, err); err != nil {
-		return err
-	}
-
 	for _, name := range names {
 		filename := fs.Join(path, name)
-		fileInfo, err := fs.Lstat(filename)
+		err := Walk(fs, filename, walkFn)
 		if err != nil {
-			if err = walkFn(fs, filename, fileInfo, err); err != nil {
-				return err
-			}
-		} else {
-			if err = walk(fs, filename, fileInfo, walkFn); err != nil {
-				if !fileInfo.IsDir() || err != filepath.SkipDir {
-					return err
-				}
-			}
+			return err
 		}
 	}
 	return nil
 }
 
+// readDirNames returns a sorted list of directory names in the given dirname.
 func readDirNames(fs billy.Filesystem, dirname string) ([]string, error) {
 	f, err := fs.ReadDir(dirname)
 	if err != nil {

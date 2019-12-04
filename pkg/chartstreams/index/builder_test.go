@@ -10,8 +10,10 @@ import (
 	"github.com/otaviof/chart-streams/pkg/chartstreams/repo"
 )
 
-const helmChartsReferenceURL = "https://github.com/helm/charts.git"
-const helmChartsReferenceBasePath = "stable"
+const (
+	helmRepoURL         = "https://github.com/helm/charts.git"
+	helmRepoRelativeDir = "stable"
+)
 
 type TestCase struct {
 	basePath                    string
@@ -32,9 +34,9 @@ func newGitChartIndexBuilderTestCase(
 	name := fmt.Sprintf("depth %d expectedIndexFileEntryCount %d expectedChartVersionCount %d",
 		depth, expectedIndexFileEntryCount, expectedChartVersionCount)
 	return &TestCase{
-		basePath:                    helmChartsReferenceBasePath,
+		basePath:                    helmRepoRelativeDir,
 		name:                        name,
-		repoURL:                     helmChartsReferenceURL,
+		repoURL:                     helmRepoURL,
 		hash:                        plumbing.NewHash("d093c4dcc9e2c6aeeb9e81d4da428328c8d4a714"),
 		shouldFail:                  false,
 		depth:                       depth,

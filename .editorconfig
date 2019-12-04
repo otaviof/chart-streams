@@ -14,7 +14,11 @@ indent_size = 2
 [*.md]
 indent_size = 2
 
-[*.go,Makefile]
+[*.go]
+indent_size = 4
+indent_style = tab
+
+[Makefile]
 indent_size = 4
 indent_style = tab
 

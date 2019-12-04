@@ -48,7 +48,7 @@ run:
 
 # invoke script to deploy kubectl and kind
 kind:
-    ./hack/install-kind.sh
+	./hack/install-kind.sh
 
 # running all test targets
 test: test-unit test-e2e

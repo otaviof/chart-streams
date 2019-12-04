@@ -135,22 +135,7 @@ func (g *gitChartIndexBuilder) Build() (*Index, error) {
 
 	indexFile := helmrepo.NewIndexFile()
 
-	var allChartsVersions []ChartNameVersion
-	for k := range g.versionCommitMap {
-		allChartsVersions = append(allChartsVersions, k)
-	}
-
-	sort.Slice(allChartsVersions, func(i, j int) bool {
-		if allChartsVersions[i].name < allChartsVersions[j].name {
-			return true
-		}
-		if allChartsVersions[i].name == allChartsVersions[j].name {
-			return allChartsVersions[i].version < allChartsVersions[j].version
-		}
-		return false
-	})
-
-	for _, c := range allChartsVersions {
+	for _, c := range g.getAllChartsVersions() {
 		m := &chart.Metadata{
 			Name:       c.name,
 			ApiVersion: c.version,
@@ -165,6 +150,16 @@ func (g *gitChartIndexBuilder) Build() (*Index, error) {
 	}
 
 	return file, nil
+}
+
+// getAllChartsVersions returns a sorted slice containing all known charts versions.
+func (g *gitChartIndexBuilder) getAllChartsVersions() []ChartNameVersion {
+	var allChartsVersions []ChartNameVersion
+	for k := range g.versionCommitMap {
+		allChartsVersions = append(allChartsVersions, k)
+	}
+	sort.Sort(byChartNameAndVersion(allChartsVersions))
+	return allChartsVersions
 }
 
 // NewGitChartIndexBuilder creates an index builder for GitChartRepository.

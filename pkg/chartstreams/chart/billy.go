@@ -44,6 +44,9 @@ func (cb *billyChartBuilder) SetCommitTime(t time.Time) Builder {
 	return cb
 }
 
+// Build walks the chart directory reading all its artifacts and streaming their contents to a
+// gzip'ed tarball to be delivered to the caller. This method doesn't assume anything other than the
+// available filesystem.
 func (cb *billyChartBuilder) Build() (*Package, error) {
 
 	b := bytes.NewBuffer([]byte{})

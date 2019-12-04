@@ -10,6 +10,7 @@ type Package struct {
 	bytesBuffer *bytes.Buffer // package content
 }
 
+// Bytes return buffer bytes.
 func (p *Package) Bytes() []byte {
 	return p.bytesBuffer.Bytes()
 }

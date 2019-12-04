@@ -13,16 +13,20 @@ import (
 	"github.com/otaviof/chart-streams/pkg/chartstreams/config"
 )
 
+// CommitInfo holds together time and commit hash.
 type CommitInfo struct {
 	Time time.Time
 	Hash plumbing.Hash
 }
 
+// GitChartRepo represents a chart repository having Git as backend.
 type GitChartRepo struct {
 	*git.Repository
 	config *config.Config
 }
 
+// AllCommits returns a iterator with all commits available. It can return error on reading from the
+// tree, or logs.
 func (r *GitChartRepo) AllCommits() (object.CommitIter, error) {
 	ref, err := r.Head()
 	if err != nil {
@@ -37,8 +41,8 @@ func (r *GitChartRepo) AllCommits() (object.CommitIter, error) {
 	return commitIter, nil
 }
 
+// NewGitChartRepo instantiate a Git based chart repository, initializing Git repo clone first.
 func NewGitChartRepo(config *config.Config) (*GitChartRepo, error) {
-	var err error
 	storage := memory.NewStorage()
 	fs := memfs.New()
 	r, err := git.Clone(storage, fs, &git.CloneOptions{
@@ -46,7 +50,6 @@ func NewGitChartRepo(config *config.Config) (*GitChartRepo, error) {
 		Depth:      config.CloneDepth,
 		NoCheckout: true,
 	})
-
 	if err != nil {
 		return nil, fmt.Errorf("error cloning the repository: %w", err)
 	}

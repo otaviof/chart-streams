@@ -17,17 +17,23 @@ import (
 	"github.com/otaviof/chart-streams/pkg/chartstreams/repo"
 )
 
+// ChartNameVersion tuple with name and version.
 type ChartNameVersion struct {
 	name    string
 	version string
 }
 
+// gitChartIndexBuilder creates an "index.yaml" representation from a git repo.
 type gitChartIndexBuilder struct {
 	gitChartRepo     *repo.GitChartRepo
 	versionCommitMap map[ChartNameVersion]repo.CommitInfo
 	basePath         string
 }
 
+// ChartNotFoundErr not-found error.
+var ChartNotFoundErr = errors.New("chart not found")
+
+// SetBasePath set basePath attribute.
 func (g *gitChartIndexBuilder) SetBasePath(basePath string) Builder {
 	g.basePath = basePath
 	return g
@@ -35,9 +41,15 @@ func (g *gitChartIndexBuilder) SetBasePath(basePath string) Builder {
 
 var _ Builder = &gitChartIndexBuilder{}
 
-func (ib gitChartIndexBuilder) addChartNameVersionToCommitMap(name string, version string, hash plumbing.Hash, t time.Time) {
+// addChart mark the tuple name-version of a given chart, together with the commit-id data.
+func (g gitChartIndexBuilder) addChart(
+	name string,
+	version string,
+	hash plumbing.Hash,
+	t time.Time,
+) {
 	cnv := ChartNameVersion{name: name, version: version}
-	ib.versionCommitMap[cnv] = repo.CommitInfo{
+	g.versionCommitMap[cnv] = repo.CommitInfo{
 		Time: t,
 		Hash: hash,
 	}
@@ -76,10 +88,10 @@ func getChartVersion(wt *git.Worktree, chartPath string) (string, error) {
 	return chartYaml.GetVersion(), nil
 }
 
-var ErrChartNotFound = errors.New("chart not found")
-
-func (ib *gitChartIndexBuilder) Build() (*Index, error) {
-	commitIter, err := ib.gitChartRepo.AllCommits()
+// Build index. It will walk by all commits available from the repository, and identify charts and
+// versions per commit.
+func (g *gitChartIndexBuilder) Build() (*Index, error) {
+	commitIter, err := g.gitChartRepo.AllCommits()
 	if err != nil {
 		return nil, fmt.Errorf("Initialize(): error getting commit iterator: %s", err)
 	}
@@ -91,7 +103,7 @@ func (ib *gitChartIndexBuilder) Build() (*Index, error) {
 			break
 		}
 
-		w, err := ib.gitChartRepo.Worktree()
+		w, err := g.gitChartRepo.Worktree()
 		if err != nil {
 			return nil, err
 		}
@@ -101,30 +113,30 @@ func (ib *gitChartIndexBuilder) Build() (*Index, error) {
 			return nil, checkoutErr
 		}
 
-		chartDirEntries, readDirErr := w.Filesystem.ReadDir(ib.basePath)
+		chartDirEntries, readDirErr := w.Filesystem.ReadDir(g.basePath)
 		if readDirErr != nil {
 			return nil, readDirErr
 		}
 
 		for _, entry := range chartDirEntries {
 			chartName := entry.Name()
-			chartPath := w.Filesystem.Join(ib.basePath, chartName)
+			chartPath := w.Filesystem.Join(g.basePath, chartName)
 			chartVersion, err := getChartVersion(w, chartPath)
 			if err != nil {
-				if err != ErrChartNotFound {
+				if err != ChartNotFoundErr {
 					return nil, err
 				}
 				continue
 			}
 
-			ib.addChartNameVersionToCommitMap(chartName, chartVersion, c.Hash, c.Committer.When)
+			g.addChart(chartName, chartVersion, c.Hash, c.Committer.When)
 		}
 	}
 
 	indexFile := helmrepo.NewIndexFile()
 
 	var allChartsVersions []ChartNameVersion
-	for k := range ib.versionCommitMap {
+	for k := range g.versionCommitMap {
 		allChartsVersions = append(allChartsVersions, k)
 	}
 
@@ -149,7 +161,7 @@ func (ib *gitChartIndexBuilder) Build() (*Index, error) {
 
 	file := &Index{
 		IndexFile:                   indexFile,
-		chartNameVersionToCommitMap: ib.versionCommitMap,
+		chartNameVersionToCommitMap: g.versionCommitMap,
 	}
 
 	return file, nil

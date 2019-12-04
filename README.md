@@ -8,8 +8,8 @@
     <a alt="Code Coverage" href="https://codecov.io/gh/otaviof/chart-streams">
         <img alt="Code Coverage" src="https://codecov.io/gh/otaviof/chart-streams/branch/master/graph/badge.svg">
     </a>
-    <a href="https://godoc.org/github.com/otaviof/chart-streams/pkg/chart-streams">
-        <img alt="GoDoc Reference" src="https://godoc.org/github.com/otaviof/chart-streams/pkg/chart-streams?status.svg">
+    <a href="https://godoc.org/github.com/otaviof/chart-streams/pkg/chartstreams">
+        <img alt="GoDoc Reference" src="https://godoc.org/github.com/otaviof/chart-streams/pkg/chartstreams?status.svg">
     </a>
     <a alt="CI Status" href="https://travis-ci.com/otaviof/chart-streams">
         <img alt="CI Status" src="https://travis-ci.com/otaviof/chart-streams.svg?branch=master">

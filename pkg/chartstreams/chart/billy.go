@@ -16,9 +16,13 @@ import (
 )
 
 type billyChartBuilder struct {
+	// Filesystem is where chart files will be read from.
 	Filesystem billy.Filesystem
-	ChartPath  *string
-	ChartName  *string
+	// ChartPath is the path for the chart inside the filesystem.
+	ChartPath *string
+	// ChartName is the name of the chart being built.
+	ChartName *string
+	// CommitTime is the time the commit was performed.
 	CommitTime *time.Time
 }
 

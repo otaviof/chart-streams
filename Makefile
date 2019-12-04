@@ -62,5 +62,5 @@ test-e2e:
 	echo "TODO: include end-to-end tests here!"
 
 # codecov.io test coverage report
-coverage:
+codecov:
 	./hack/codecov.sh

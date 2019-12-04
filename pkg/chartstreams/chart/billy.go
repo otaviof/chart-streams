@@ -58,14 +58,13 @@ func (cb *billyChartBuilder) Build() (*Package, error) {
 		cb.Filesystem,
 		*cb.ChartPath,
 		func(fs billy.Filesystem, path string, fileInfo os.FileInfo) error {
-			archivePath := fs.Join(*cb.ChartName, strings.TrimPrefix(path, *cb.ChartPath))
-
 			header, err := tar.FileInfoHeader(fileInfo, fileInfo.Name())
 			if err != nil {
 				return err
 			}
 
-			header.Name = archivePath
+			// archive path
+			header.Name = fs.Join(*cb.ChartName, strings.TrimPrefix(path, *cb.ChartPath))
 
 			if fileInfo.IsDir() {
 				header.Mode = int64(fileInfo.Mode())

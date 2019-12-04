@@ -84,43 +84,34 @@ func appendFileToTarWriter(cb *billyChartBuilder, tw *tar.Writer) billyutil.Walk
 			return err
 		}
 
-		// archive path
+		// populate common header fields
 		header.Name = fs.Join(*cb.ChartName, strings.TrimPrefix(path, *cb.ChartPath))
+		header.Mode = int64(fileInfo.Mode())
+		header.ModTime = *cb.CommitTime
 
+		// if the current path is a directory, it is only required to write a header for it
 		if fileInfo.IsDir() {
-			header.Mode = int64(fileInfo.Mode())
-			header.ModTime = *cb.CommitTime
 			header.Size = fileInfo.Size()
 			return tw.WriteHeader(header)
 		}
 
-		if !fileInfo.Mode().IsRegular() {
-			return nil
-		}
+		// if the current path is a regular file, write its header and bytes to the tar writer
+		if fileInfo.Mode().IsRegular() {
+			b, err := ioutil.ReadFile(path)
+			if err != nil {
+				return err
+			}
 
-		f, openErr := fs.Open(path)
-		if openErr != nil {
-			return openErr
-		}
+			header.Size = int64(len(b))
+			if err := tw.WriteHeader(header); err != nil {
+				return err
+			}
 
-		b, err := ioutil.ReadAll(f)
-		if err != nil {
+			_, err = tw.Write(b)
+
 			return err
 		}
 
-		if err := f.Close(); err != nil {
-			return err
-		}
-
-		header.Mode = int64(fileInfo.Mode())
-		header.ModTime = *cb.CommitTime
-		header.Size = int64(len(b))
-
-		if err := tw.WriteHeader(header); err != nil {
-			return err
-		}
-
-		_, err = tw.Write(b)
-		return err
+		return nil
 	}
 }

@@ -1,4 +1,7 @@
+# application name
 APP ?= chart-streams
+# sanitizing app variable to become a valid go module name
+MODULE = $(subst -,,$(APP))
 
 RUN_ARGS ?= serve
 COMMON_FLAGS ?= -v -mod=vendor
@@ -11,13 +14,15 @@ OUTPUT_DIR ?= build
 CODECOV_TOKEN ?=
 COVERAGE_DIR ?= $(OUTPUT_DIR)/coverage
 
-# sanitizing app variable to become a valid go module name
-MODULE = $(subst -,,$(APP))
+KUBECTL_VERSION ?= v1.16.3
 
-# exporting variables needed for coverage
+# used in `codecov.sh` script
 export OUTPUT_DIR
 export COVERAGE_DIR
 export CODECOV_TOKEN
+
+# used in `install-kind.sh` script
+export KUBECTL_VERSION
 
 default: build
 
@@ -40,6 +45,10 @@ build: prepare vendor
 # execute "go run" against cmd
 run:
 	go run $(COMMON_FLAGS) cmd/$(MODULE)/* $(RUN_ARGS)
+
+# invoke script to deploy kubectl and kind
+kind:
+    ./hack/install-kind.sh
 
 # running all test targets
 test: test-unit test-e2e

@@ -23,7 +23,7 @@ function die () {
 
 [[ -z "${KUBECTL_VERSION}" ]] && die "Can't find KUBECTL_VERSION'!"
 
-curl --location --output="${KUBECTL_BIN}" "${KUBECTL_URL}/${KUBECTL_URL_PATH}"
+curl --location --output "${KUBECTL_BIN}" "${KUBECTL_URL}/${KUBECTL_URL_PATH}"
 chmod +x "${KUBECTL_BIN}"
 
 #

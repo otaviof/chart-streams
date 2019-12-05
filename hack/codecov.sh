@@ -25,7 +25,7 @@ function die() {
 }
 
 function download_codecov() {
-    curl --silent >${CODECOV_BIN}
+    curl --silent --output ${CODECOV_BIN} https://codecov.io/bash
     chmod +x ${CODECOV_BIN}
 }
 

@@ -35,3 +35,19 @@ The basic workflow is represented as:
 <p align="center">
     <img alt="chart-streams diagram" src="./assets/diagrams/cs-diagram-1.png">
 </p>
+
+
+# Usage
+
+## Build and run
+```
+make run
+```
+
+Or
+
+```
+make && ./build/chart-streams serve
+```
+
+Call the `/index.yaml` endpoint to get the index of all charts present in https://github.com/helm/charts/tree/master/stable

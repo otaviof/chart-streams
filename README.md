@@ -37,9 +37,9 @@ The basic workflow is represented as:
 </p>
 
 
-# Usage
+## Usage
 
-## Build and run
+### Build and run
 ```
 make run
 ```
@@ -49,5 +49,7 @@ Or
 ```
 make && ./build/chart-streams serve
 ```
+
+### Chart repository Index
 
 Call the `/index.yaml` endpoint to get the index of all charts present in https://github.com/helm/charts/tree/master/stable

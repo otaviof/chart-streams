@@ -24,9 +24,9 @@ ENV LANG="en_US.utf8" \
     GIN_MODE="release"
 
 COPY --from=builder \
-    /go/src/github.com/otaviof/chart-streams/build/helm-repository-service \
-    /usr/local/bin/helm-repository-service
+    /go/src/github.com/otaviof/chart-streams/build/chart-streams \
+    /usr/local/bin/chart-streams
 
 USER 10001
 
-ENTRYPOINT [ "/usr/local/bin/helm-repository-service", "serve" ]
+ENTRYPOINT [ "/usr/local/bin/chart-streams", "serve" ]

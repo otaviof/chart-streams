@@ -1,0 +1,9 @@
+.editorconfig
+.env
+.git/
+.gitignore
+.travis.yml
+.vscode/
+README.md
+assets/
+build/

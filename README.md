@@ -14,11 +14,9 @@
     <a alt="CI Status" href="https://travis-ci.com/otaviof/chart-streams">
         <img alt="CI Status" src="https://travis-ci.com/otaviof/chart-streams.svg?branch=master">
     </a>
-<!--
-    <a alt="Docker-Cloud Build Status" href="https://hub.docker.com/r/otaviof/chart-streams">
-        <img alt="Docker-Cloud Build Status" src="https://img.shields.io/docker/cloud/build/otaviof/chart-streams.svg">
+    <a alt="Image Build Status" href="https://quay.io/repository/otaviof/chart-streams">
+        <img alt="Image Build Status" src="https://quay.io/repository/otaviof/chart-streams/status">
     </a>
-  -->
 </p>
 
 # `chart-streams`

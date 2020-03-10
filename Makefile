@@ -2,6 +2,8 @@
 APP ?= chart-streams
 # sanitizing app variable to become a valid go module name
 MODULE = $(subst -,,$(APP))
+# container image tag
+IMAGE_TAG ?= "quay.io/otaviof/$(APP):latest"
 
 RUN_ARGS ?= serve
 COMMON_FLAGS ?= -v -mod=vendor
@@ -43,6 +45,10 @@ prepare:
 # build application command-line
 build: prepare vendor
 	go build $(COMMON_FLAGS) -o="$(OUTPUT_DIR)/$(APP)" cmd/$(MODULE)/*
+
+# build container image with Docker
+image:
+	docker build --tag="$(IMAGE_TAG)" .
 
 # execute "go run" against cmd
 run:

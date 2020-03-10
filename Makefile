@@ -48,10 +48,6 @@ build: prepare vendor
 run:
 	go run $(COMMON_FLAGS) cmd/$(MODULE)/* $(RUN_ARGS)
 
-# invoke script to deploy kubectl and kind
-kind:
-	./hack/install-kind.sh
-
 # running all test targets
 test: test-unit test-e2e
 

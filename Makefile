@@ -27,14 +27,17 @@ export KUBECTL_VERSION
 default: build
 
 # initialize Go modules vendor directory
+.PHONY: vendor
 vendor:
 	go mod vendor
 
 # clean up build directory
+.PHONY: clean
 clean:
 	@rm -rf $(OUTPUT_DIR)
 
 # create build and coverage directories
+.PHONY: prepare
 prepare:
 	@mkdir -p $(COVERAGE_DIR) > /dev/null 2>&1 || true
 
@@ -54,10 +57,12 @@ kind:
 test: test-unit test-e2e
 
 # run unit tests
+.PHONY: test-unit
 test-unit: prepare
 	go test $(COMMON_FLAGS) $(TEST_FLAGS) -coverprofile=$(COVERAGE_DIR)/coverage-unit.txt ./...
 
 # run end-to-end tests
+.PHONY: test-e2e
 test-e2e:
 	echo "TODO: include end-to-end tests here!"
 

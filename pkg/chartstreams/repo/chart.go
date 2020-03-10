@@ -51,7 +51,7 @@ func NewGitChartRepo(config *config.Config) (*GitChartRepo, error) {
 		NoCheckout: true,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("error cloning the repository: %w", err)
+		return nil, fmt.Errorf("error cloning the repository: %v", err)
 	}
 
 	return &GitChartRepo{r, config}, nil

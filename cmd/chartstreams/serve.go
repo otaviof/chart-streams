@@ -7,6 +7,7 @@ import (
 
 	"github.com/otaviof/chart-streams/pkg/chartstreams"
 	"github.com/otaviof/chart-streams/pkg/chartstreams/config"
+	"github.com/otaviof/chart-streams/pkg/chartstreams/provider"
 )
 
 // serveCmd sub-command to represent the server.
@@ -39,8 +40,14 @@ func runServeCmd(cmd *cobra.Command, args []string) {
 	}
 
 	log.Printf("Starting server with config: '%#v'", cfg)
-	s := chartstreams.NewServer(cfg)
+
+	p := provider.NewGitChartProvider(cfg)
+	if err := p.Initialize(); err != nil {
+		log.Fatalf("Error during chart provider initialization: '%q'", err)
+	}
+
+	s := chartstreams.NewServer(cfg, p)
 	if err := s.Start(); err != nil {
-		panic(err)
+		log.Fatalf("Error during server start: '%q'", err)
 	}
 }

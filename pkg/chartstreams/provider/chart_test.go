@@ -36,7 +36,7 @@ func TestGitChartProvider(t *testing.T) {
 
 		metadata, found := index.Entries[helmChartName]
 		assert.True(t, found)
-		helmChartVersion = metadata[0].GetApiVersion()
+		helmChartVersion = metadata[0].Version
 		assert.NotEmpty(t, helmChartVersion)
 	})
 

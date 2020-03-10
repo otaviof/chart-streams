@@ -1,7 +1,8 @@
 package index
 
 import (
-	helmrepo "k8s.io/helm/pkg/repo"
+	"helm.sh/helm/v3/pkg/chart"
+	helmrepo "helm.sh/helm/v3/pkg/repo"
 
 	"github.com/otaviof/chart-streams/pkg/chartstreams/repo"
 )
@@ -14,19 +15,16 @@ type Builder interface {
 
 // Index represent a chart index of some sort.
 type Index struct {
-	IndexFile                   *helmrepo.IndexFile
-	chartNameVersionToCommitMap map[ChartNameVersion]repo.CommitInfo
+	IndexFile                *helmrepo.IndexFile
+	chartMetadataToCommitMap map[*chart.Metadata]repo.CommitInfo
 }
 
 // GetChartVersionMapping based on chart name and version, return repository commit information.
 func (i *Index) GetChartVersionMapping(name string, version string) *repo.CommitInfo {
-	chartNameVersion := ChartNameVersion{
-		name:    name,
-		version: version,
-	}
-
-	if m, ok := i.chartNameVersionToCommitMap[chartNameVersion]; ok {
-		return &m
+	for metadata, commitInfo := range i.chartMetadataToCommitMap {
+		if metadata.Name == name && metadata.Version == version {
+			return &commitInfo
+		}
 	}
 	return nil
 }

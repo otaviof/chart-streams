@@ -57,31 +57,24 @@ func (cb *billyChartBuilder) Build() (*Package, error) {
 	gzw := gzip.NewWriter(bw)
 	tw := tar.NewWriter(gzw)
 
-	walkErr := billyutil.Walk(cb.Filesystem, *cb.ChartPath, appendFileToTarWriter(cb, tw))
-
-	if walkErr != nil {
-		return nil, walkErr
+	if err := billyutil.Walk(cb.Filesystem, *cb.ChartPath, appendToTarWriter(cb, tw)); err != nil {
+		return nil, err
 	}
-
 	if err := tw.Close(); err != nil {
 		return nil, err
 	}
-
 	if err := gzw.Close(); err != nil {
 		return nil, err
 	}
-
 	if err := bw.Flush(); err != nil {
 		return nil, err
 	}
 
-	p := &Package{bytesBuffer: b}
-
-	return p, nil
+	return &Package{BytesBuffer: b}, nil
 }
 
-// appendFileToTarWriter returns a walkFn that appends each file into the given tar writer.
-func appendFileToTarWriter(cb *billyChartBuilder, tw *tar.Writer) billyutil.WalkFn {
+// appendToTarWriter returns a walkFn that appends each file into the given tar writer.
+func appendToTarWriter(cb *billyChartBuilder, tw *tar.Writer) billyutil.WalkFn {
 	return func(fs billy.Filesystem, path string, fileInfo os.FileInfo) error {
 		header, err := tar.FileInfoHeader(fileInfo, fileInfo.Name())
 		if err != nil {
@@ -112,7 +105,6 @@ func appendFileToTarWriter(cb *billyChartBuilder, tw *tar.Writer) billyutil.Walk
 			}
 
 			_, err = tw.Write(b)
-
 			return err
 		}
 

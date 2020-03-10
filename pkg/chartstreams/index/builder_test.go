@@ -2,8 +2,10 @@ package index
 
 import (
 	"fmt"
+	"io/ioutil"
 	"testing"
 
+	log "github.com/sirupsen/logrus"
 	"gopkg.in/src-d/go-git.v4/plumbing"
 
 	"github.com/otaviof/chart-streams/pkg/chartstreams/config"
@@ -46,11 +48,14 @@ func newGitChartIndexBuilderTestCase(
 }
 
 func TestNewGitChartIndexBuilder(t *testing.T) {
+	log.SetOutput(ioutil.Discard)
+
 	tests := []*TestCase{
 		newGitChartIndexBuilderTestCase(1, 10, 100),
 		newGitChartIndexBuilderTestCase(5, 10, 100),
 		newGitChartIndexBuilderTestCase(50, 10, 100),
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			cfg := &config.Config{

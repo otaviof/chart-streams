@@ -1,7 +1,7 @@
 package provider
 
 import (
-	"k8s.io/helm/pkg/repo"
+	"helm.sh/helm/v3/pkg/repo"
 
 	"github.com/otaviof/chart-streams/pkg/chartstreams/chart"
 )

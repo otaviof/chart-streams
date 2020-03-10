@@ -1,35 +1,32 @@
-# On CI, use
-# FROM registry.svc.ci.openshift.org/ocp/builder:golang-1.13 AS builder
+FROM golang:1.14 AS builder
 
-FROM openshift/origin-release:golang-1.13 AS builder
-
-ENV LANG=en_US.utf8
-ENV GIT_COMMITTER_NAME devtools
-ENV GIT_COMMITTER_EMAIL devtools@redhat.com
-LABEL com.redhat.delivery.appregistry=true
+ENV LANG="en_US.utf8" \
+    GIT_COMMITTER_NAME="devtools" \
+    GIT_COMMITTER_EMAIL="devtools@redhat.com"
 
 WORKDIR /go/src/github.com/otaviof/chart-streams
 
-# Copy only relevant things (instead of all) to speed-up the build.
 COPY . .
 
-ARG VERBOSE=2
-RUN make build
+RUN make
 
-#--------------------------------------------------------------------
+#
+# Application Image
+#
 
-# On CI , use
-# FROM registry.svc.ci.openshift.org/ocp/ubi-minimal:7
+FROM registry.access.redhat.com/ubi8/ubi-minimal
 
-FROM registry.access.redhat.com/ubi7/ubi-minimal
+LABEL com.redhat.delivery.appregistry="true"
+LABEL maintainer="Devtools <devtools@redhat.com>"
+LABEL author="Devtools <devtools@redhat.com>"
 
-LABEL com.redhat.delivery.appregistry=true
-LABEL maintainer "Devtools <devtools@redhat.com>"
-LABEL author "Shoubhik Bose <shbose@redhat.com>"
-ENV LANG=en_US.utf8
+ENV LANG="en_US.utf8" \
+    GIN_MODE="release"
 
-COPY --from=builder /go/src/github.com/otaviof/chart-streams/build/chart-streams /usr/local/bin/chart-streams
+COPY --from=builder \
+    /go/src/github.com/otaviof/chart-streams/build/helm-repository-service \
+    /usr/local/bin/helm-repository-service
 
 USER 10001
 
-ENTRYPOINT [ "/usr/local/bin/chart-streams","serve" ]
+ENTRYPOINT [ "/usr/local/bin/helm-repository-service", "serve" ]

@@ -1,23 +1,25 @@
 package provider
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/otaviof/chart-streams/pkg/chartstreams/config"
-)
-
-const (
-	helmRepoURL         = "https://github.com/helm/charts.git"
-	helmRepoRelativeDir = "stable"
-	helmChartName       = "traefik"
+	"github.com/otaviof/chart-streams/test/util"
 )
 
 func TestGitChartProvider(t *testing.T) {
+	helmChartName := "one"
+	helmRepoDir, err := util.ChartsRepoDir("../../..")
+	require.NoError(t, err, "on discovering test repo directory dir")
+	helmRepoURL := fmt.Sprintf("file://%s", helmRepoDir)
+
 	config := &config.Config{
 		RepoURL:     helmRepoURL,
-		RelativeDir: helmRepoRelativeDir,
+		RelativeDir: "/",
 		CloneDepth:  1,
 	}
 	g := NewGitChartProvider(config)

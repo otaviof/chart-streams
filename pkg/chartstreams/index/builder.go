@@ -11,7 +11,7 @@ import (
 	"gopkg.in/src-d/go-git.v4"
 	"gopkg.in/src-d/go-git.v4/plumbing"
 	"gopkg.in/src-d/go-git.v4/plumbing/object"
-	"helm.sh/helm/v3/pkg/chart"
+	helmchart "helm.sh/helm/v3/pkg/chart"
 	helmrepo "helm.sh/helm/v3/pkg/repo"
 	"sigs.k8s.io/yaml"
 
@@ -27,7 +27,7 @@ type ChartNameVersion struct {
 // gitChartIndexBuilder creates an "index.yaml" representation from a git repo.
 type gitChartIndexBuilder struct {
 	gitChartRepo      *repo.GitChartRepo
-	metadataCommitMap map[*chart.Metadata]repo.CommitInfo
+	metadataCommitMap map[*helmchart.Metadata]repo.CommitInfo
 	basePath          string
 }
 
@@ -43,15 +43,15 @@ func (g *gitChartIndexBuilder) SetBasePath(basePath string) Builder {
 }
 
 // addChart mark the tuple name-version of a given chart, together with the commit-id data.
-func (g gitChartIndexBuilder) addChart(metadata *chart.Metadata, hash plumbing.Hash, t time.Time) {
+func (g gitChartIndexBuilder) addChart(metadata *helmchart.Metadata, hash plumbing.Hash, t time.Time) {
 	g.metadataCommitMap[metadata] = repo.CommitInfo{
 		Time: t,
 		Hash: hash,
 	}
 }
 
-// getChartMetadata returns the validated chart.Metadata payload.
-func getChartMetadata(wt *git.Worktree, chartPath string) (*chart.Metadata, error) {
+// getChartMetadata returns the validated helmchart.Metadata payload.
+func getChartMetadata(wt *git.Worktree, chartPath string) (*helmchart.Metadata, error) {
 	chartDirInfo, err := wt.Filesystem.Lstat(chartPath)
 	if err != nil {
 		return nil, err
@@ -71,12 +71,12 @@ func getChartMetadata(wt *git.Worktree, chartPath string) (*chart.Metadata, erro
 	if err != nil {
 		return nil, err
 	}
-	metadata := new(chart.Metadata)
+	metadata := &helmchart.Metadata{}
 	if err = yaml.Unmarshal(b, metadata); err != nil {
 		return nil, err
 	}
 	if metadata.APIVersion == "" {
-		metadata.APIVersion = chart.APIVersionV1
+		metadata.APIVersion = helmchart.APIVersionV1
 	}
 	return metadata, metadata.Validate()
 }
@@ -156,6 +156,6 @@ func (g *gitChartIndexBuilder) Build() (*Index, error) {
 func NewGitChartIndexBuilder(r *repo.GitChartRepo) Builder {
 	return &gitChartIndexBuilder{
 		gitChartRepo:      r,
-		metadataCommitMap: map[*chart.Metadata]repo.CommitInfo{},
+		metadataCommitMap: map[*helmchart.Metadata]repo.CommitInfo{},
 	}
 }

@@ -9,10 +9,12 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/otaviof/chart-streams/pkg/chartstreams"
 	"github.com/otaviof/chart-streams/pkg/chartstreams/config"
 	"github.com/otaviof/chart-streams/pkg/chartstreams/provider"
+	"github.com/otaviof/chart-streams/test/util"
 )
 
 func init() {
@@ -62,14 +64,17 @@ func waitForServer(cfg *config.Config, sleep time.Duration) error {
 
 // TestMain main integration test entry point.
 func TestMain(t *testing.T) {
+	repoDir, err := util.ChartsRepoDir("../..")
+	require.NoError(t, err, "on discovering test repo directory dir")
+
 	cfg := &config.Config{
-		RepoURL:     "https://github.com/helm/charts.git",
-		RelativeDir: "stable",
+		RepoURL:     fmt.Sprintf("file://%s", repoDir),
+		RelativeDir: "/",
 		CloneDepth:  1,
 		ListenAddr:  "127.0.0.1:8080",
 	}
 
-	err := startServer(cfg)
+	err = startServer(cfg)
 	assert.NoError(t, err)
 
 	err = waitForServer(cfg, 10)

@@ -10,11 +10,7 @@ import (
 
 	"github.com/otaviof/chart-streams/pkg/chartstreams/config"
 	"github.com/otaviof/chart-streams/pkg/chartstreams/repo"
-)
-
-const (
-	helmRepoURL         = "https://github.com/helm/charts.git"
-	helmRepoRelativeDir = "stable"
+	"github.com/otaviof/chart-streams/test/util"
 )
 
 type TestCase struct {
@@ -35,10 +31,14 @@ func newGitChartIndexBuilderTestCase(
 ) *TestCase {
 	name := fmt.Sprintf("depth %d expectedIndexFileEntryCount %d expectedChartVersionCount %d",
 		depth, expectedIndexFileEntryCount, expectedChartVersionCount)
+
+	helmRepoDir, _ := util.ChartsRepoDir("../../..")
+	helmRepoURL := fmt.Sprintf("file://%s", helmRepoDir)
+
 	return &TestCase{
-		basePath:                    helmRepoRelativeDir,
 		name:                        name,
 		repoURL:                     helmRepoURL,
+		basePath:                    "/",
 		hash:                        plumbing.NewHash("d093c4dcc9e2c6aeeb9e81d4da428328c8d4a714"),
 		shouldFail:                  false,
 		depth:                       depth,
@@ -51,9 +51,8 @@ func TestNewGitChartIndexBuilder(t *testing.T) {
 	log.SetOutput(ioutil.Discard)
 
 	tests := []*TestCase{
-		newGitChartIndexBuilderTestCase(1, 10, 100),
-		newGitChartIndexBuilderTestCase(5, 10, 100),
-		newGitChartIndexBuilderTestCase(50, 10, 100),
+		newGitChartIndexBuilderTestCase(1, 1, 1),
+		newGitChartIndexBuilderTestCase(2, 2, 2),
 	}
 
 	for _, tt := range tests {

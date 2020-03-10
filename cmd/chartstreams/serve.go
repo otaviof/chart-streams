@@ -24,6 +24,7 @@ func init() {
 
 	flags.Int("clone-depth", 1, "Git clone depth")
 	flags.String("repo-url", "https://github.com/helm/charts.git", "Helm Charts Git repository URL")
+	flags.String("relative-dir", "stable", "Relative charts directory in repository")
 	flags.String("listen-addr", ":8080", "Address to listen")
 
 	rootCmd.AddCommand(serveCmd)
@@ -36,7 +37,7 @@ func runServeCmd(cmd *cobra.Command, args []string) {
 		RepoURL:     viper.GetString("repo-url"),
 		CloneDepth:  viper.GetInt("clone-depth"),
 		ListenAddr:  viper.GetString("listen-addr"),
-		RelativeDir: "stable",
+		RelativeDir: viper.GetString("relative-dir"),
 	}
 
 	log.Printf("Starting server with config: '%#v'", cfg)

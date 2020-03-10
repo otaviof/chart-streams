@@ -42,7 +42,7 @@ archive-charts-repo:
 # uncompress test charts repository archive tarball
 unarchive-charts-repo:
 	rm -rf "$(CHARTS_REPO_DIR)"
-	tar zxvpf $(CHARTS_REPO_ARCHIVE)
+	tar zxpf $(CHARTS_REPO_ARCHIVE)
 
 # create build and coverage directories
 .PHONY: prepare

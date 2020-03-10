@@ -60,11 +60,12 @@ become `CHART_STREAMS_CLONE_DEPTH` as environment variables, and on command line
 
 The configuration options available are:
 
-| Parameter   | Default                            | Description                                     |
-|-------------|------------------------------------|-------------------------------------------------|
-| repo-url    | https://github.com/helm/charts.git | git repository URL                              |
-| clone-depth | 1                                  | how many commits are pulled from Git repository |
-| listen-addr | 127.0.0.1:8080                     | address the application will be listening on    |
+| Parameter    | Default                            | Description                                  |
+|--------------|------------------------------------|----------------------------------------------|
+| repo-url     | https://github.com/helm/charts.git | Git repository URL                           |
+| relative-dir | stable                             | Relative directory in Git repository         |
+| clone-depth  | 1                                  | Amount of commits from Git repository        |
+| listen-addr  | 127.0.0.1:8080                     | Address the application will be listening on |
 
 ## Endpoints
 

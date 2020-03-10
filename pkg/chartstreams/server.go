@@ -21,6 +21,11 @@ type Server struct {
 	chartProvider provider.ChartProvider
 }
 
+// RootHandler returns a simple string.
+func (s *Server) RootHandler(c *gin.Context) {
+	c.String(http.StatusOK, "chart-streams")
+}
+
 // IndexHandler endpoint handler to marshal and return index yaml payload.
 func (s *Server) IndexHandler(c *gin.Context) {
 	index, err := s.chartProvider.GetIndexFile()
@@ -62,6 +67,7 @@ func (s *Server) SetupRoutes() *gin.Engine {
 
 	g.Use(ginrus.Ginrus(log.StandardLogger(), time.RFC3339, true))
 
+	g.GET("/", s.RootHandler)
 	g.GET("/index.yaml", s.IndexHandler)
 	g.GET("/chart/:name/*version", s.DirectLinkHandler)
 

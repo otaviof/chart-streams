@@ -8,11 +8,10 @@ COMMON_FLAGS ?= -v -mod=vendor
 
 TEST_TIMEOUT ?= 3m
 TEST_FLAGS ?= -failfast -timeout=$(TEST_TIMEOUT)
-
-OUTPUT_DIR ?= build
-
 CODECOV_TOKEN ?=
 COVERAGE_DIR ?= $(OUTPUT_DIR)/coverage
+
+OUTPUT_DIR ?= build
 
 KUBECTL_VERSION ?= v1.16.3
 
@@ -59,12 +58,21 @@ test: test-unit test-e2e
 # run unit tests
 .PHONY: test-unit
 test-unit: prepare
-	go test $(COMMON_FLAGS) $(TEST_FLAGS) -coverprofile=$(COVERAGE_DIR)/coverage-unit.txt ./...
+	go test \
+		$(COMMON_FLAGS) \
+		$(TEST_FLAGS) \
+		-coverprofile=$(COVERAGE_DIR)/coverage-unit.txt \
+		./cmd/... \
+		./pkg/...
 
 # run end-to-end tests
 .PHONY: test-e2e
 test-e2e:
-	echo "TODO: include end-to-end tests here!"
+	go test \
+		$(COMMON_FLAGS) \
+		$(TEST_FLAGS) \
+		-coverprofile=$(COVERAGE_DIR)/coverage-e2e.txt \
+		./test/...
 
 # codecov.io test coverage report
 codecov:

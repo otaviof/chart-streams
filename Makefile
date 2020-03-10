@@ -4,26 +4,24 @@ APP ?= chart-streams
 MODULE = $(subst -,,$(APP))
 # container image tag
 IMAGE_TAG ?= "quay.io/otaviof/$(APP):latest"
+# build directory
+OUTPUT_DIR ?= build
 
 RUN_ARGS ?= serve
 COMMON_FLAGS ?= -v -mod=vendor
+
+CHARTS_REPO_ARCHIVE ?= test/charts-repo.tar.gz
+CHARTS_REPO_DIR ?= $(OUTPUT_DIR)/charts-repo
 
 TEST_TIMEOUT ?= 3m
 TEST_FLAGS ?= -failfast -timeout=$(TEST_TIMEOUT)
 CODECOV_TOKEN ?=
 COVERAGE_DIR ?= $(OUTPUT_DIR)/coverage
 
-OUTPUT_DIR ?= build
-
-KUBECTL_VERSION ?= v1.16.3
-
 # used in `codecov.sh` script
 export OUTPUT_DIR
 export COVERAGE_DIR
 export CODECOV_TOKEN
-
-# used in `install-kind.sh` script
-export KUBECTL_VERSION
 
 default: build
 
@@ -37,9 +35,18 @@ vendor:
 clean:
 	@rm -rf $(OUTPUT_DIR)
 
+# compress local charts test repository
+archive-charts-repo:
+	tar zcvpf $(CHARTS_REPO_ARCHIVE) $(CHARTS_REPO_DIR)
+
+# uncompress test charts repository archive tarball
+unarchive-charts-repo:
+	rm -rf "$(CHARTS_REPO_DIR)"
+	tar zxvpf $(CHARTS_REPO_ARCHIVE)
+
 # create build and coverage directories
 .PHONY: prepare
-prepare:
+prepare: unarchive-charts-repo
 	@mkdir -p $(COVERAGE_DIR) > /dev/null 2>&1 || true
 
 # build application command-line
@@ -69,7 +76,7 @@ test-unit: prepare
 
 # run end-to-end tests
 .PHONY: test-e2e
-test-e2e:
+test-e2e: prepare
 	go test \
 		$(COMMON_FLAGS) \
 		$(TEST_FLAGS) \

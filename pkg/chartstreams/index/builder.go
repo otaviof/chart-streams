@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"os"
+	"strings"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -16,6 +18,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/otaviof/chart-streams/pkg/chartstreams/repo"
+	"github.com/otaviof/chart-streams/pkg/chartstreams/utils"
 )
 
 // gitChartIndexBuilder creates an "index.yaml" representation from a git repo.
@@ -75,47 +78,133 @@ func getChartMetadata(wt *git.Worktree, chartPath string) (*helmchart.Metadata, 
 	return metadata, metadata.Validate()
 }
 
+// modifiedChartDirs inspect commit object in order to select only the chart directories that have
+// been affected in the commit.
+func (g *gitChartIndexBuilder) modifiedChartDirs(c *object.Commit) ([]string, error) {
+	stats, err := c.Stats()
+	if err != nil {
+		return nil, err
+	}
+
+	var absBasePath string
+	if strings.HasPrefix(g.basePath, "/") {
+		absBasePath = g.basePath
+	} else {
+		absBasePath = fmt.Sprintf("/%s", g.basePath)
+	}
+	if absBasePath != "/" && !strings.HasSuffix(absBasePath, "/") {
+		absBasePath = fmt.Sprintf("%s/", absBasePath)
+	}
+
+	var chartDirPaths []string
+	for _, stat := range stats {
+		// skipping entries that haven't changed
+		if stat.Addition == 0 && stat.Deletion == 0 {
+			continue
+		}
+
+		absPath := fmt.Sprintf("/%s", stat.Name)
+
+		// skipping entries that are not in pre-defined base path
+		if !strings.HasPrefix(absPath, absBasePath) {
+			continue
+		}
+
+		// discoverying the relative path by removing base path
+		relativePath := strings.TrimPrefix(absPath, absBasePath)
+		// splitting into path elements, in order to pick the chart root directory
+		elements := strings.Split(relativePath, string(os.PathSeparator))
+		if len(elements) <= 1 {
+			continue
+		}
+		chartRootDir := elements[0]
+		if !utils.ContainsStringSlice(chartDirPaths, chartRootDir) {
+			chartDirPaths = append(chartDirPaths, elements[0])
+		}
+	}
+	return chartDirPaths, nil
+}
+
+// allChartDirs inspect the base location to pick all directories, which are expected to be chart
+// directories.
+func (g *gitChartIndexBuilder) allChartDirs(w *git.Worktree) ([]string, error) {
+	chartDirs, err := w.Filesystem.ReadDir(g.basePath)
+	if err != nil {
+		return nil, err
+	}
+	var charDirPaths []string
+	for _, dir := range chartDirs {
+		if !dir.IsDir() {
+			continue
+		}
+		charDirPaths = append(charDirPaths, dir.Name())
+	}
+	return charDirPaths, nil
+}
+
+// checkoutWorkTree instantiate and checkout the commit hash in a working tree.
+func (g *gitChartIndexBuilder) checkoutWorkTree(hash plumbing.Hash) (*git.Worktree, error) {
+	w, err := g.gitChartRepo.Worktree()
+	if err != nil {
+		return nil, err
+	}
+	if err := w.Checkout(&git.CheckoutOptions{Hash: hash}); err != nil {
+		return nil, err
+	}
+	return w, nil
+}
+
 // walk through existing commits, and on each interaction inspect directory tree searching for
 // charts. From those the "Chart.yaml" is taken in consideration in order to extract and register
 // its metadata.
 func (g *gitChartIndexBuilder) walk(commitIter object.CommitIter) error {
 	defer commitIter.Close()
+
+	counter := 0
 	for {
 		c, err := commitIter.Next()
-		if err != nil && err != io.EOF {
+		if c == nil || (err != nil && err == io.EOF) {
 			break
 		}
 
-		w, err := g.gitChartRepo.Worktree()
-		if err != nil {
-			return err
-		}
-		if err := w.Checkout(&git.CheckoutOptions{Hash: c.Hash}); err != nil {
-			return err
-		}
-		chartDirs, err := w.Filesystem.ReadDir(g.basePath)
+		w, err := g.checkoutWorkTree(c.Hash)
 		if err != nil {
 			return err
 		}
 
-		commitID := c.ID().String()
+		var chartDirPaths []string
+		if counter == 0 {
+			log.Info("HEAD: Retrieving all chart directories...")
+			chartDirPaths, err = g.allChartDirs(w)
+		} else {
+			log.Info("Commit: Retrieving modified chart directories...")
+			chartDirPaths, err = g.modifiedChartDirs(c)
+		}
+		// ignoring "object not found errors" (https://github.com/src-d/go-git/issues/1151)
+		if err != nil && err != plumbing.ErrObjectNotFound {
+			return err
+		}
+		log.Infof("Chart directories: '%v'", chartDirPaths)
+
 		// inspecting all directories where is expected to find a helm-chart
-		for _, entry := range chartDirs {
-			chartName := entry.Name()
-			chartPath := w.Filesystem.Join(g.basePath, chartName)
+		for _, chartDir := range chartDirPaths {
+			chartPath := w.Filesystem.Join(g.basePath, chartDir)
 			log.Infof("Inspecting directory '%s' for chart '%s' on commit-id '%s'",
-				chartPath, chartName, commitID)
+				chartPath, chartDir, c.ID().String())
 
 			metadata, err := getChartMetadata(w, chartPath)
 			if err != nil {
 				if err != ErrChartNotFound {
 					return err
 				}
+				log.Errorf("Error on inspecting chart '%s': '%#v'", chartPath, err)
 				continue
 			}
 
 			g.addChart(metadata, c.Hash, c.Committer.When)
 		}
+
+		counter++
 	}
 	return nil
 }
@@ -147,9 +236,10 @@ func (g *gitChartIndexBuilder) Build() (*Index, error) {
 }
 
 // NewGitChartIndexBuilder creates an index builder for GitChartRepository.
-func NewGitChartIndexBuilder(r *repo.GitChartRepo) Builder {
+func NewGitChartIndexBuilder(r *repo.GitChartRepo, basePath string) Builder {
 	return &gitChartIndexBuilder{
 		gitChartRepo:      r,
 		metadataCommitMap: map[*helmchart.Metadata]repo.CommitInfo{},
+		basePath:          basePath,
 	}
 }

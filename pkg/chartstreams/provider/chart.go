@@ -36,10 +36,9 @@ func (g *GitChartProvider) initializeRepository() error {
 
 // buildIndexFile instantiate global index.
 func (g *GitChartProvider) buildIndexFile() error {
+	builder := index.NewGitChartIndexBuilder(g.gitRepo, g.config.RelativeDir)
 	var err error
-	g.index, err = index.NewGitChartIndexBuilder(g.gitRepo).
-		SetBasePath(g.config.RelativeDir).
-		Build()
+	g.index, err = builder.Build()
 	return err
 }
 

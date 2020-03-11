@@ -70,7 +70,7 @@ func TestMain(t *testing.T) {
 	cfg := &config.Config{
 		RepoURL:     fmt.Sprintf("file://%s", repoDir),
 		RelativeDir: "/",
-		CloneDepth:  1,
+		CloneDepth:  0,
 		ListenAddr:  "127.0.0.1:8080",
 	}
 

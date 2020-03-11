@@ -30,20 +30,23 @@ func (s *Server) RootHandler(c *gin.Context) {
 func (s *Server) IndexHandler(c *gin.Context) {
 	index, err := s.chartProvider.GetIndexFile()
 	if err != nil {
-		c.AbortWithError(500, err)
+		_ = c.AbortWithError(500, err)
+		return
 	}
 
 	// rendering yaml using k8s approach
 	b, err := yaml.Marshal(index)
 	if err != nil {
-		c.AbortWithError(500, err)
+		_ = c.AbortWithError(500, err)
+		return
 	}
 
 	c.Status(http.StatusOK)
 	c.Header("Content-Type", "application/x-yaml; charset=utf-8")
 	_, err = c.Writer.Write(b)
 	if err != nil {
-		c.AbortWithError(500, err)
+		_ = c.AbortWithError(500, err)
+		return
 	}
 }
 
@@ -55,7 +58,8 @@ func (s *Server) DirectLinkHandler(c *gin.Context) {
 
 	p, err := s.chartProvider.GetChart(name, version)
 	if err != nil {
-		c.AbortWithError(500, err)
+		_ = c.AbortWithError(500, err)
+		return
 	}
 
 	c.Data(http.StatusOK, "application/gzip", p.Bytes())

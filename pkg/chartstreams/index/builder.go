@@ -18,12 +18,6 @@ import (
 	"github.com/otaviof/chart-streams/pkg/chartstreams/repo"
 )
 
-// ChartNameVersion tuple with name and version.
-type ChartNameVersion struct {
-	name    string
-	version string
-}
-
 // gitChartIndexBuilder creates an "index.yaml" representation from a git repo.
 type gitChartIndexBuilder struct {
 	gitChartRepo      *repo.GitChartRepo

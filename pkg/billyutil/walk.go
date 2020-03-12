@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"sort"
 
-	billy "gopkg.in/src-d/go-billy.v4"
+	"github.com/go-git/go-billy/v5"
 )
 
 // WalkFn is executed for each file in the path inside the given filesystem.

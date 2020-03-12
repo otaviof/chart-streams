@@ -5,8 +5,8 @@ import (
 	"io/ioutil"
 	"testing"
 
+	"github.com/go-git/go-git/v5/plumbing"
 	log "github.com/sirupsen/logrus"
-	"gopkg.in/src-d/go-git.v4/plumbing"
 
 	"github.com/otaviof/chart-streams/pkg/chartstreams/config"
 	"github.com/otaviof/chart-streams/pkg/chartstreams/repo"

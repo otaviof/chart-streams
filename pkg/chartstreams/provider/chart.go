@@ -3,7 +3,7 @@ package provider
 import (
 	"fmt"
 
-	"gopkg.in/src-d/go-git.v4"
+	"github.com/go-git/go-git/v5"
 	helmrepo "helm.sh/helm/v3/pkg/repo"
 
 	"github.com/otaviof/chart-streams/pkg/chartstreams/chart"
@@ -47,11 +47,9 @@ func (g *GitChartProvider) Initialize() error {
 	if err := g.initializeRepository(); err != nil {
 		return err
 	}
-
 	if err := g.buildIndexFile(); err != nil {
 		return err
 	}
-
 	return nil
 }
 
@@ -61,19 +59,16 @@ func (g *GitChartProvider) GetChart(name string, version string) (*chart.Package
 	if mapping == nil {
 		return nil, fmt.Errorf("GetChart(): couldn't find commit hash from specified version")
 	}
-
 	w, err := g.gitRepo.Worktree()
 	if err != nil {
 		return nil, err
 	}
-
 	err = w.Checkout(&git.CheckoutOptions{Hash: mapping.Hash})
 	if err != nil {
 		return nil, err
 	}
 
 	chartPath := w.Filesystem.Join(g.config.RelativeDir, name)
-
 	p, err := chart.NewBillyChartBuilder(w.Filesystem).
 		SetChartName(name).
 		SetChartPath(chartPath).
@@ -82,7 +77,6 @@ func (g *GitChartProvider) GetChart(name string, version string) (*chart.Package
 	if err != nil {
 		return nil, fmt.Errorf("GetChart(): couldn't build package %s: %s", name, err)
 	}
-
 	return p, nil
 }
 

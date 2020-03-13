@@ -23,7 +23,7 @@ repository would. With the the following advantages:
 
 - Promoting Git repository as source-of-authority over Helm-Charts;
 - Low-friction workflow, `index.yaml` and Chart tarballs are generated dynamically;
-- Allowing clients to reach branches and commit-ids, with [Semantic Versioning][semver];
+- Allowing clients to reach branches and commit-ids, with [Semantic Versioning][helmsemver];
 
 The basic workflow is represented as:
 
@@ -66,6 +66,70 @@ The configuration options available are:
 | relative-dir | stable                             | Relative directory in Git repository         |
 | clone-depth  | 1                                  | Amount of commits from Git repository        |
 | listen-addr  | 127.0.0.1:8080                     | Address the application will be listening on |
+| log-level    | info                               | Log verbosity level                          |
+
+### Example
+
+As a real world example, serve the last 200 commits of [charts][helmstablecharts] repository, with:
+
+```sh
+docker run --publish="8080:8080" quay.io/otaviof/chart-streams:latest --clone-depth=200
+```
+
+Now, add `chart-streams` as a chart repository:
+
+```sh
+helm repo add cs http://127.0.0.1:8080
+```
+
+And then, you're able to search for `grafana` in the repository. Notice the `cs/grafana` where
+`cs` is the local name of `chart-streams` based repository:
+
+```
+$ helm search repo cs/grafana
+NAME      	CHART VERSION	APP VERSION	DESCRIPTION
+cs/grafana	5.0.6        	6.6.2      	The leading tool for querying and visualizing t..
+```
+
+You can also search for `--devel` (development) versions:
+
+```
+$ helm search repo cs/grafana --versions --devel
+NAME      	CHART VERSION                                     	APP VERSION	DESCRIPTION
+[...]
+cs/grafana	2.1.0-revert-10682-master-f0cd0f9f                	5.4.3      	The leading tool for querying and visualizing t...
+cs/grafana	2.0.2-revert-10682-master-fa4468c8                	5.4.3      	The leading tool for querying and visualizing t...
+cs/grafana	1.14.1-update-owners-d09fd18b                     	5.2.3      	The leading tool for querying and visualizing t...
+cs/grafana	1.14.0-update-owners-2496eaf3                     	5.2.2      	The leading tool for querying and visualizing t...
+```
+
+Therefore, automatically `chart-streams` is displaying branches as development version of your
+Helm-Charts, you can reach them as, for instance:
+
+```sh
+helm install grafana cs/grafana:2.0.2-revert-10682-master-fa4468c8
+```
+
+## Semantic Versioning
+
+Git repository tree is transversed commit-by-commit starting from latest. On transversing the
+commits `chart-streams` will identify from which branch each change is coming from, and with this
+information publish stable and development versions of Helm-Charts, adding
+[semanatic versioning][semver] representation [understood by Helm][helmsemver].
+
+Chart versions are ultimately defined by regular `Chart.yaml`, however it's enriched when change is
+located in a branch other than `master`. In `master` the exact version present in `Chart.yaml` is
+published, while in other branches is enriched with the branch name and short commit identifier.
+
+For instance, lets see how `grafana` version `0.0.1` would be represented from a Git repository
+having `master` a `change` branches, where `change` is ahead of master, but `grafana` version is
+still the same in `Chart.yaml`.
+
+| Git Reference Name          | Version                 |
+|-----------------------------|-------------------------|
+| `master` (or `HEAD`)        | `0.0.1`                 |
+| `change` (latest commit)    | `0.0.1-change`          |
+| `change` (previous commits) | `0.0.1-change-12345678` |
 
 ## Endpoints
 
@@ -96,7 +160,9 @@ make test
 Additionally, consider [`.editorconfig`](./.editorconfig) file for code standards, and
 [`.travis.yml`](./.travis.yml) for the continuous integration steps.
 
-[semver]: https://helm.sh/docs/topics/chart_best_practices/conventions/
-[gnumake]: https://www.gnu.org/software/make/
-[golang]: https://golang.org/
+[semver]: https://semver.org
+[helmsemver]: https://helm.sh/docs/topics/chart_best_practices/conventions
+[gnumake]: https://www.gnu.org/software/make
+[golang]: https://golang.org
 [quayioimage]: https://quay.io/repository/otaviof/chart-streams
+[helmstablecharts]: https://github.com/helm/charts.git

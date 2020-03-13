@@ -3,16 +3,15 @@ package index
 import (
 	"errors"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"os"
 	"strings"
 	"time"
 
+	"github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/plumbing"
+	"github.com/go-git/go-git/v5/plumbing/object"
 	log "github.com/sirupsen/logrus"
-	"gopkg.in/src-d/go-git.v4"
-	"gopkg.in/src-d/go-git.v4/plumbing"
-	"gopkg.in/src-d/go-git.v4/plumbing/object"
 	helmchart "helm.sh/helm/v3/pkg/chart"
 	helmrepo "helm.sh/helm/v3/pkg/repo"
 	"sigs.k8s.io/yaml"
@@ -24,8 +23,9 @@ import (
 // gitChartIndexBuilder creates an "index.yaml" representation from a git repo.
 type gitChartIndexBuilder struct {
 	gitChartRepo      *repo.GitChartRepo
-	metadataCommitMap map[*helmchart.Metadata]repo.CommitInfo
+	metadataCommitMap map[*helmchart.Metadata]*repo.CommitInfo
 	basePath          string
+	depth             int
 }
 
 var _ Builder = &gitChartIndexBuilder{}
@@ -33,17 +33,50 @@ var _ Builder = &gitChartIndexBuilder{}
 // ErrChartNotFound not-found error.
 var ErrChartNotFound = errors.New("chart not found")
 
-// SetBasePath set basePath attribute.
-func (g *gitChartIndexBuilder) SetBasePath(basePath string) Builder {
-	g.basePath = basePath
-	return g
+// exists check if a given metadata is already present in local cache.
+func (g *gitChartIndexBuilder) exists(metadata *helmchart.Metadata) bool {
+	for m := range g.metadataCommitMap {
+		if metadata.Name == m.Name && metadata.Version == m.Version {
+			return true
+		}
+	}
+	return false
 }
 
-// addChart mark the tuple name-version of a given chart, together with the commit-id data.
-func (g gitChartIndexBuilder) addChart(metadata *helmchart.Metadata, hash plumbing.Hash, t time.Time) {
-	g.metadataCommitMap[metadata] = repo.CommitInfo{
-		Time: t,
-		Hash: hash,
+// semVer semantic versioning representation of given version, revision and commit hash.
+func (g *gitChartIndexBuilder) semVer(version, revision string, hash plumbing.Hash) string {
+	return fmt.Sprintf("%s-%s-%s", version, revision, hash.String()[:8])
+}
+
+// addChart adds informed chart using revision and commit-hash as available versions. When revision
+// is HEAD or master, it publishes the original Chart versions. Otherwise, it will create a "semver"
+// representation.
+func (g gitChartIndexBuilder) addChart(
+	metadata *helmchart.Metadata,
+	revision string,
+	hash plumbing.Hash,
+	t time.Time,
+) {
+	versions := []string{}
+	if revision == "HEAD" || revision == "master" {
+		if g.exists(metadata) {
+			versions = append(versions, g.semVer(metadata.Version, revision, hash))
+		} else {
+			versions = append(versions, metadata.Version)
+		}
+	} else {
+		versions = append(versions, g.semVer(metadata.Version, revision, hash))
+		if _, ok := g.gitChartRepo.Revisions[hash]; ok {
+			versions = append(versions, fmt.Sprintf("%s-%s", metadata.Version, revision))
+		}
+	}
+
+	log.Debugf("Publishing chart '%s' versions '%v'", metadata.Name, versions)
+	for _, v := range versions {
+		m := &helmchart.Metadata{}
+		*m = *metadata
+		m.Version = v
+		g.metadataCommitMap[m] = &repo.CommitInfo{Time: t, Hash: hash}
 	}
 }
 
@@ -102,7 +135,7 @@ func (g *gitChartIndexBuilder) modifiedChartDirs(c *object.Commit) ([]string, er
 		if stat.Addition == 0 && stat.Deletion == 0 {
 			continue
 		}
-
+		// making sure absolute path starts from "/"
 		absPath := fmt.Sprintf("/%s", stat.Name)
 
 		// skipping entries that are not in pre-defined base path
@@ -160,53 +193,55 @@ func (g *gitChartIndexBuilder) checkoutWorkTree(hash plumbing.Hash) (*git.Worktr
 func (g *gitChartIndexBuilder) walk(commitIter object.CommitIter) error {
 	defer commitIter.Close()
 
-	counter := 0
-	for {
-		c, err := commitIter.Next()
-		if c == nil || (err != nil && err == io.EOF) {
-			break
-		}
+	head, err := g.gitChartRepo.Head()
+	if err != nil {
+		return err
+	}
 
+	var revision string
+	var counter int = 1
+	return commitIter.ForEach(func(c *object.Commit) error {
 		w, err := g.checkoutWorkTree(c.Hash)
 		if err != nil {
-			return err
+			return fmt.Errorf("error checking out working tree: '%s'", err)
+		}
+
+		commitID := c.ID().String()
+		if currentRevision, ok := g.gitChartRepo.Revisions[c.Hash]; ok {
+			revision = currentRevision
 		}
 
 		var chartDirPaths []string
-		if counter == 0 {
-			log.Info("HEAD: Retrieving all chart directories...")
+		if c.Hash == head.Hash() {
+			log.Infof("HEAD (%s): Retrieving all chart directories...", commitID)
 			chartDirPaths, err = g.allChartDirs(w)
 		} else {
-			log.Info("Commit: Retrieving modified chart directories...")
+			log.Infof("[%d/%d] Commit (%s/%s): Retrieving modified charts...",
+				counter, g.depth, revision, commitID)
 			chartDirPaths, err = g.modifiedChartDirs(c)
 		}
 		// ignoring "object not found errors" (https://github.com/src-d/go-git/issues/1151)
 		if err != nil && err != plumbing.ErrObjectNotFound {
 			return err
 		}
-		log.Infof("Chart directories: '%v'", chartDirPaths)
+		log.Debugf("Chart directories: '%v'", chartDirPaths)
 
 		// inspecting all directories where is expected to find a helm-chart
 		for _, chartDir := range chartDirPaths {
 			chartPath := w.Filesystem.Join(g.basePath, chartDir)
-			log.Infof("Inspecting directory '%s' for chart '%s' on commit-id '%s'",
-				chartPath, chartDir, c.ID().String())
+			log.Debugf("Inspecting directory '%s' for chart '%s'", chartPath, chartDir)
 
-			metadata, err := getChartMetadata(w, chartPath)
-			if err != nil {
-				if err != ErrChartNotFound {
-					return err
-				}
-				log.Errorf("Error on inspecting chart '%s': '%#v'", chartPath, err)
+			if metadata, err := getChartMetadata(w, chartPath); err != nil {
+				log.Warnf("error on inspecting chart: '%#v'", err)
 				continue
+			} else {
+				g.addChart(metadata, revision, c.Hash, c.Committer.When)
 			}
-
-			g.addChart(metadata, c.Hash, c.Committer.When)
 		}
 
 		counter++
-	}
-	return nil
+		return nil
+	})
 }
 
 // Build index. It will walk by all commits available from the repository, and identify charts and
@@ -214,11 +249,11 @@ func (g *gitChartIndexBuilder) walk(commitIter object.CommitIter) error {
 func (g *gitChartIndexBuilder) Build() (*Index, error) {
 	commitIter, err := g.gitChartRepo.AllCommits()
 	if err != nil {
-		return nil, fmt.Errorf("Initialize(): error getting commit iterator: %s", err)
+		return nil, fmt.Errorf("error getting commit iterator: %s", err)
 	}
 
 	if err := g.walk(commitIter); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error walking through the commits: %s", err)
 	}
 
 	indexFile := helmrepo.NewIndexFile()
@@ -236,10 +271,11 @@ func (g *gitChartIndexBuilder) Build() (*Index, error) {
 }
 
 // NewGitChartIndexBuilder creates an index builder for GitChartRepository.
-func NewGitChartIndexBuilder(r *repo.GitChartRepo, basePath string) Builder {
+func NewGitChartIndexBuilder(r *repo.GitChartRepo, basePath string, depth int) Builder {
 	return &gitChartIndexBuilder{
 		gitChartRepo:      r,
-		metadataCommitMap: map[*helmchart.Metadata]repo.CommitInfo{},
+		metadataCommitMap: map[*helmchart.Metadata]*repo.CommitInfo{},
 		basePath:          basePath,
+		depth:             depth,
 	}
 }

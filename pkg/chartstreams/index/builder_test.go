@@ -66,7 +66,7 @@ func TestNewGitChartIndexBuilder(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			i, err := NewGitChartIndexBuilder(r, tt.basePath).Build()
+			i, err := NewGitChartIndexBuilder(r, tt.basePath, cfg.CloneDepth).Build()
 			if err != nil {
 				t.Fatal(err)
 			}

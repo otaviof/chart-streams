@@ -36,7 +36,7 @@ func (g *GitChartProvider) initializeRepository() error {
 
 // buildIndexFile instantiate global index.
 func (g *GitChartProvider) buildIndexFile() error {
-	builder := index.NewGitChartIndexBuilder(g.gitRepo, g.config.RelativeDir)
+	builder := index.NewGitChartIndexBuilder(g.gitRepo, g.config.RelativeDir, g.config.CloneDepth)
 	var err error
 	g.index, err = builder.Build()
 	return err
@@ -69,11 +69,8 @@ func (g *GitChartProvider) GetChart(name string, version string) (*chart.Package
 	}
 
 	chartPath := w.Filesystem.Join(g.config.RelativeDir, name)
-	p, err := chart.NewBillyChartBuilder(w.Filesystem).
-		SetChartName(name).
-		SetChartPath(chartPath).
-		SetCommitTime(mapping.Time).
-		Build()
+	builder := chart.NewBillyChartBuilder(w.Filesystem, name, chartPath, mapping.Time)
+	p, err := builder.Build()
 	if err != nil {
 		return nil, fmt.Errorf("GetChart(): couldn't build package %s: %s", name, err)
 	}

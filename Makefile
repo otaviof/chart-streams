@@ -28,7 +28,7 @@ default: build
 # initialize Go modules vendor directory
 .PHONY: vendor
 vendor:
-	go mod vendor
+	@go mod vendor
 
 # clean up build directory
 .PHONY: clean
@@ -41,8 +41,8 @@ archive-charts-repo:
 
 # uncompress test charts repository archive tarball
 unarchive-charts-repo:
-	rm -rf "$(CHARTS_REPO_DIR)"
-	tar zxpf $(CHARTS_REPO_ARCHIVE)
+	@rm -rf "$(CHARTS_REPO_DIR)"
+	@tar zxpf $(CHARTS_REPO_ARCHIVE)
 
 # create build and coverage directories
 .PHONY: prepare

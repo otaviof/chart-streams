@@ -149,8 +149,8 @@ and version (`:version`).
 ## Contributing
 
 To build this project locally you will need [GNU/Make][gnumake] and [Golang][golang] installed.
-The most important targets are `make build` and `make tst`, in order to build and run project
-tests (unit and integration).
+The most important targets are `make build` (default) and `make test`, in order to build and run
+project tests (unit and integration).
 
 ```sh
 make

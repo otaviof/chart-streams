@@ -16,37 +16,13 @@ import (
 )
 
 type billyChartBuilder struct {
-	// Filesystem is where chart files will be read from.
-	Filesystem billy.Filesystem
-	// ChartPath is the path for the chart inside the filesystem.
-	ChartPath *string
-	// ChartName is the name of the chart being built.
-	ChartName *string
-	// CommitTime is the time the commit was performed.
-	CommitTime *time.Time
+	Filesystem billy.Filesystem // where chart files will be read from
+	ChartPath  string           // path for the chart inside the filesystem
+	ChartName  string           // chart name
+	CommitTime time.Time        // commit time
 }
 
 var _ Builder = &billyChartBuilder{}
-
-// NewBillyChartBuilder builds charts with content stored in billy filesystem.
-func NewBillyChartBuilder(fs billy.Filesystem) Builder {
-	return &billyChartBuilder{Filesystem: fs}
-}
-
-func (cb *billyChartBuilder) SetChartName(n string) Builder {
-	cb.ChartName = &n
-	return cb
-}
-
-func (cb *billyChartBuilder) SetChartPath(p string) Builder {
-	cb.ChartPath = &p
-	return cb
-}
-
-func (cb *billyChartBuilder) SetCommitTime(t time.Time) Builder {
-	cb.CommitTime = &t
-	return cb
-}
 
 // Build walks the chart directory reading all its artifacts and streaming their contents to a
 // gzip'ed tarball to be delivered to the caller. This method doesn't assume anything other than the
@@ -57,7 +33,7 @@ func (cb *billyChartBuilder) Build() (*Package, error) {
 	gzw := gzip.NewWriter(bw)
 	tw := tar.NewWriter(gzw)
 
-	if err := billyutil.Walk(cb.Filesystem, *cb.ChartPath, appendToTarWriter(cb, tw)); err != nil {
+	if err := billyutil.Walk(cb.Filesystem, cb.ChartPath, appendToTarWriter(cb, tw)); err != nil {
 		return nil, err
 	}
 	if err := tw.Close(); err != nil {
@@ -82,9 +58,9 @@ func appendToTarWriter(cb *billyChartBuilder, tw *tar.Writer) billyutil.WalkFn {
 		}
 
 		// populate common header fields
-		header.Name = fs.Join(*cb.ChartName, strings.TrimPrefix(path, *cb.ChartPath))
+		header.Name = fs.Join(cb.ChartName, strings.TrimPrefix(path, cb.ChartPath))
 		header.Mode = int64(fileInfo.Mode())
-		header.ModTime = *cb.CommitTime
+		header.ModTime = cb.CommitTime
 
 		// if the current path is a directory, it is only required to write a header for it
 		if fileInfo.IsDir() {
@@ -109,5 +85,15 @@ func appendToTarWriter(cb *billyChartBuilder, tw *tar.Writer) billyutil.WalkFn {
 		}
 
 		return nil
+	}
+}
+
+// NewBillyChartBuilder builds charts with content stored in billy filesystem.
+func NewBillyChartBuilder(fs billy.Filesystem, name, path string, t time.Time) Builder {
+	return &billyChartBuilder{
+		Filesystem: fs,
+		ChartName:  name,
+		ChartPath:  path,
+		CommitTime: t,
 	}
 }

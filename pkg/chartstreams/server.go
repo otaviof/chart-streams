@@ -56,6 +56,7 @@ func (s *Server) DirectLinkHandler(c *gin.Context) {
 	version := c.Param("version")
 	version = strings.TrimPrefix(version, "/")
 
+	log.Debugf("Creating tarball for '%s' version '%s'", name, version)
 	p, err := s.chartProvider.GetChart(name, version)
 	if err != nil {
 		_ = c.AbortWithError(500, err)

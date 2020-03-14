@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/go-git/go-git/v5"
+	log "github.com/sirupsen/logrus"
 	helmrepo "helm.sh/helm/v3/pkg/repo"
 
 	"github.com/otaviof/chart-streams/pkg/chartstreams/chart"
@@ -55,25 +56,28 @@ func (g *GitChartProvider) Initialize() error {
 
 // GetChart returns a chart Package for the given chart name and version.
 func (g *GitChartProvider) GetChart(name string, version string) (*chart.Package, error) {
-	mapping := g.index.GetChartVersionMapping(name, version)
-	if mapping == nil {
+	commitInfo := g.index.GetChartVersionMapping(name, version)
+	if commitInfo == nil {
 		return nil, fmt.Errorf("GetChart(): couldn't find commit hash from specified version")
 	}
+
+	log.Debugf("Checking out '%s:%s' on commit hash '%s'", name, version, commitInfo.Hash)
 	w, err := g.gitRepo.Worktree()
 	if err != nil {
 		return nil, err
 	}
-	err = w.Checkout(&git.CheckoutOptions{Hash: mapping.Hash})
+	err = w.Checkout(&git.CheckoutOptions{Hash: commitInfo.Hash})
 	if err != nil {
 		return nil, err
 	}
 
 	chartPath := w.Filesystem.Join(g.config.RelativeDir, name)
-	builder := chart.NewBillyChartBuilder(w.Filesystem, name, chartPath, mapping.Time)
+	builder := chart.NewBillyChartBuilder(w.Filesystem, name, chartPath, commitInfo.Time)
 	p, err := builder.Build()
 	if err != nil {
 		return nil, fmt.Errorf("GetChart(): couldn't build package %s: %s", name, err)
 	}
+	log.Debugf("Package digest '%s' size '%d' bytes", commitInfo.Digest, len(p.Bytes()))
 	return p, nil
 }
 

@@ -16,6 +16,7 @@ import (
 	helmrepo "helm.sh/helm/v3/pkg/repo"
 	"sigs.k8s.io/yaml"
 
+	"github.com/otaviof/chart-streams/pkg/chartstreams/chart"
 	"github.com/otaviof/chart-streams/pkg/chartstreams/repo"
 	"github.com/otaviof/chart-streams/pkg/chartstreams/utils"
 )
@@ -55,7 +56,8 @@ func (g gitChartIndexBuilder) addChart(
 	metadata *helmchart.Metadata,
 	revision string,
 	hash plumbing.Hash,
-	t time.Time,
+	t *time.Time,
+	digest string,
 ) {
 	versions := []string{}
 	if revision == "HEAD" || revision == "master" {
@@ -71,12 +73,13 @@ func (g gitChartIndexBuilder) addChart(
 		}
 	}
 
-	log.Debugf("Publishing chart '%s' versions '%v'", metadata.Name, versions)
+	log.Debugf("Publishing chart '%s' (digest '%s') versions '%v'", metadata.Name, digest, versions)
+	commitInfo := &repo.CommitInfo{Time: t, Hash: hash, Digest: digest}
 	for _, v := range versions {
 		m := &helmchart.Metadata{}
 		*m = *metadata
 		m.Version = v
-		g.metadataCommitMap[m] = &repo.CommitInfo{Time: t, Hash: hash}
+		g.metadataCommitMap[m] = commitInfo
 	}
 }
 
@@ -109,6 +112,20 @@ func getChartMetadata(wt *git.Worktree, chartPath string) (*helmchart.Metadata, 
 		metadata.APIVersion = helmchart.APIVersionV1
 	}
 	return metadata, metadata.Validate()
+}
+
+// getChartDigest calculate chart sha256 sum based on informed work tree.
+func getChartDigest(w *git.Worktree, name, chartPath string, t *time.Time) (string, error) {
+	builder := chart.NewBillyChartBuilder(w.Filesystem, name, chartPath, t)
+	p, err := builder.Build()
+	if err != nil {
+		return "", err
+	}
+	digest, err := p.SHA256()
+	if err != nil {
+		return "", err
+	}
+	return digest, nil
 }
 
 // modifiedChartDirs inspect commit object in order to select only the chart directories that have
@@ -191,8 +208,6 @@ func (g *gitChartIndexBuilder) checkoutWorkTree(hash plumbing.Hash) (*git.Worktr
 // charts. From those the "Chart.yaml" is taken in consideration in order to extract and register
 // its metadata.
 func (g *gitChartIndexBuilder) walk(commitIter object.CommitIter) error {
-	defer commitIter.Close()
-
 	head, err := g.gitChartRepo.Head()
 	if err != nil {
 		return err
@@ -201,15 +216,15 @@ func (g *gitChartIndexBuilder) walk(commitIter object.CommitIter) error {
 	var revision string
 	var counter int = 1
 	return commitIter.ForEach(func(c *object.Commit) error {
+		if currentRevision, ok := g.gitChartRepo.Revisions[c.Hash]; ok {
+			revision = currentRevision
+		}
 		w, err := g.checkoutWorkTree(c.Hash)
 		if err != nil {
 			return fmt.Errorf("error checking out working tree: '%s'", err)
 		}
 
 		commitID := c.ID().String()
-		if currentRevision, ok := g.gitChartRepo.Revisions[c.Hash]; ok {
-			revision = currentRevision
-		}
 
 		var chartDirPaths []string
 		if c.Hash == head.Hash() {
@@ -235,7 +250,11 @@ func (g *gitChartIndexBuilder) walk(commitIter object.CommitIter) error {
 				log.Warnf("error on inspecting chart: '%#v'", err)
 				continue
 			} else {
-				g.addChart(metadata, revision, c.Hash, c.Committer.When)
+				packageDigest, err := getChartDigest(w, metadata.Name, chartPath, &c.Committer.When)
+				if err != nil {
+					return err
+				}
+				g.addChart(metadata, revision, c.Hash, &c.Committer.When, packageDigest)
 			}
 		}
 
@@ -255,12 +274,13 @@ func (g *gitChartIndexBuilder) Build() (*Index, error) {
 	if err := g.walk(commitIter); err != nil {
 		return nil, fmt.Errorf("error walking through the commits: %s", err)
 	}
+	defer commitIter.Close()
 
 	indexFile := helmrepo.NewIndexFile()
-	for metadata := range g.metadataCommitMap {
+	for metadata, commitInfo := range g.metadataCommitMap {
 		baseUrl := fmt.Sprintf("/chart/%s/%s", metadata.Name, metadata.Version)
 		log.Infof("Adding '%s/%s' (%s) to index file", metadata.Name, metadata.Version, baseUrl)
-		indexFile.Add(metadata, "chart.tgz", baseUrl, "deadbeef")
+		indexFile.Add(metadata, "chart.tgz", baseUrl, commitInfo.Digest)
 	}
 	indexFile.SortEntries()
 

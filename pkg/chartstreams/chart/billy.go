@@ -19,7 +19,7 @@ type billyChartBuilder struct {
 	Filesystem billy.Filesystem // where chart files will be read from
 	ChartPath  string           // path for the chart inside the filesystem
 	ChartName  string           // chart name
-	CommitTime time.Time        // commit time
+	CommitTime *time.Time       // commit time
 }
 
 var _ Builder = &billyChartBuilder{}
@@ -51,45 +51,49 @@ func (cb *billyChartBuilder) Build() (*Package, error) {
 
 // appendToTarWriter returns a walkFn that appends each file into the given tar writer.
 func appendToTarWriter(cb *billyChartBuilder, tw *tar.Writer) billyutil.WalkFn {
-	return func(fs billy.Filesystem, path string, fileInfo os.FileInfo) error {
+	return func(fs billy.Filesystem, entityPath string, fileInfo os.FileInfo) error {
 		header, err := tar.FileInfoHeader(fileInfo, fileInfo.Name())
 		if err != nil {
 			return err
 		}
 
-		// populate common header fields
-		header.Name = fs.Join(cb.ChartName, strings.TrimPrefix(path, cb.ChartPath))
+		header.Name = fs.Join(cb.ChartName, strings.TrimPrefix(entityPath, cb.ChartPath))
 		header.Mode = int64(fileInfo.Mode())
-		header.ModTime = cb.CommitTime
+		header.ModTime = *cb.CommitTime
 
-		// if the current path is a directory, it is only required to write a header for it
+		// when current path is a directory, it is only required to write a header for it
 		if fileInfo.IsDir() {
 			header.Size = fileInfo.Size()
 			return tw.WriteHeader(header)
 		}
 
-		// if the current path is a regular file, write its header and bytes to the tar writer
-		if fileInfo.Mode().IsRegular() {
-			b, err := ioutil.ReadFile(path)
-			if err != nil {
-				return err
-			}
+		// when current path is a regular file, write its header and bytes to the tar writer
+		if !fileInfo.Mode().IsRegular() {
+			return nil
+		}
 
-			header.Size = int64(len(b))
-			if err := tw.WriteHeader(header); err != nil {
-				return err
-			}
+		f, err := fs.Open(entityPath)
+		if err != nil {
+			return err
+		}
+		defer f.Close()
 
-			_, err = tw.Write(b)
+		b, err := ioutil.ReadAll(f)
+		if err != nil {
 			return err
 		}
 
-		return nil
+		header.Size = int64(len(b))
+		if err = tw.WriteHeader(header); err != nil {
+			return err
+		}
+		_, err = tw.Write(b)
+		return err
 	}
 }
 
 // NewBillyChartBuilder builds charts with content stored in billy filesystem.
-func NewBillyChartBuilder(fs billy.Filesystem, name, path string, t time.Time) Builder {
+func NewBillyChartBuilder(fs billy.Filesystem, name, path string, t *time.Time) Builder {
 	return &billyChartBuilder{
 		Filesystem: fs,
 		ChartName:  name,

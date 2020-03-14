@@ -19,17 +19,24 @@ import (
 
 // CommitInfo holds together time and commit hash.
 type CommitInfo struct {
-	Time time.Time
-	Hash plumbing.Hash
+	Time   *time.Time    // commit time
+	Hash   plumbing.Hash // commit hash
+	Digest string        // data digest
 }
-
-type memoizer map[plumbing.Hash]bool
 
 // GitChartRepo represents a chart repository having Git as backend.
 type GitChartRepo struct {
 	*git.Repository                          // embedded git.Repository
 	config          *config.Config           // application configuration
 	Revisions       map[plumbing.Hash]string // mapping revision commit to name
+}
+
+// filterPaths check if informed path has relative-dir as prefix.
+func (g *GitChartRepo) filterPaths(entityPath string) bool {
+	if g.config.RelativeDir == "/" {
+		return true
+	}
+	return strings.HasPrefix(entityPath, g.config.RelativeDir)
 }
 
 // AllCommits returns a iterator with all commits available. It can return error on reading from the
@@ -40,7 +47,12 @@ func (g *GitChartRepo) AllCommits() (object.CommitIter, error) {
 		return nil, fmt.Errorf("AllCommits: error finding Head reference: %s", err)
 	}
 	// making sure all commits are included in iterator, from all branches
-	commitIter, err := g.Log(&git.LogOptions{From: ref.Hash(), All: true})
+	logOptions := &git.LogOptions{
+		From:       ref.Hash(),
+		All:        true,
+		PathFilter: g.filterPaths,
+	}
+	commitIter, err := g.Log(logOptions)
 	if err != nil {
 		return nil, fmt.Errorf("AllCommits: error obtaining commitIter: %s", err)
 	}
@@ -51,12 +63,14 @@ func (g *GitChartRepo) AllCommits() (object.CommitIter, error) {
 func NewGitChartRepo(config *config.Config) (*GitChartRepo, error) {
 	storage := memory.NewStorage()
 	fs := memfs.New()
-	r, err := git.Clone(storage, fs, &git.CloneOptions{
+	options := &git.CloneOptions{
 		URL:        config.RepoURL,
 		Depth:      config.CloneDepth,
-		Progress:   os.Stdout,
 		NoCheckout: true,
-	})
+		Progress:   os.Stdout,
+		Tags:       git.NoTags,
+	}
+	r, err := git.Clone(storage, fs, options)
 	if err != nil {
 		return nil, fmt.Errorf("error cloning the repository: '%v'", err)
 	}

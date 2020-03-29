@@ -35,14 +35,8 @@ type branchIterFn func(string, *git.Odb) error
 // originPrefix common origin string prefix.
 const originPrefix = "origin/"
 
-// checkoutOpts common checkout options
-var checkoutOpts = &git.CheckoutOpts{
-	Strategy: git.CheckoutSafe | git.CheckoutForce | git.CheckoutUseTheirs,
-}
-
-func (g *GitRepo) HeadCommit() (*git.Commit, error) {
-	return g.r.LookupCommit(g.head)
-}
+// checkoutOpts common checkout options, to force and keep a clean tree.
+var checkoutOpts = &git.CheckoutOpts{Strategy: git.CheckoutForce | git.CheckoutRemoveUntracked}
 
 // sortBranches will sort local list of branches, skipping "master".
 func (g *GitRepo) sortBranches() []string {
@@ -56,6 +50,7 @@ func (g *GitRepo) sortBranches() []string {
 	return sorted
 }
 
+// lookupBranch search for a remote branch, and if not found, a local branch instead.
 func (g *GitRepo) lookupBranch(branch string) (*git.Branch, error) {
 	remoteBranch := fmt.Sprintf("%s%s", originPrefix, branch)
 	b, err := g.r.LookupBranch(remoteBranch, git.BranchRemote)
@@ -68,18 +63,19 @@ func (g *GitRepo) lookupBranch(branch string) (*git.Branch, error) {
 	return g.r.LookupBranch(branch, git.BranchLocal)
 }
 
+// checkoutTree execute tree look up and checkout.
 func (g *GitRepo) checkoutTree(oid *git.Oid) (*git.Tree, error) {
 	tree, err := g.r.LookupTree(oid)
 	if err != nil {
 		return nil, err
 	}
-	opts := &git.CheckoutOpts{Strategy: git.CheckoutSafe}
-	if err = g.r.CheckoutTree(tree, opts); err != nil {
+	if err = g.r.CheckoutTree(tree, checkoutOpts); err != nil {
 		return nil, err
 	}
 	return tree, nil
 }
 
+// CheckoutCommit based in branch and commit id, execute tree checkout.
 func (g *GitRepo) CheckoutCommit(branch string, c *git.Commit) error {
 	log.Infof("Checking out commit-id '%s/%s'", branch, c.Id().String())
 	tree, err := g.checkoutTree(c.TreeId())
@@ -100,6 +96,8 @@ func (g *GitRepo) CheckoutCommit(branch string, c *git.Commit) error {
 	return g.r.CheckoutHead(checkoutOpts)
 }
 
+// checkoutBranch look up branch, and look up head commit, with this information it can checkout the
+// branch tree and finally, set repository information about new head.
 func (g *GitRepo) checkoutBranch(branch string) error {
 	log.Infof("Checking out branch '%s' HEAD...", branch)
 	b, err := g.lookupBranch(branch)
@@ -127,6 +125,7 @@ func (g *GitRepo) checkoutBranch(branch string) error {
 	return err
 }
 
+// branchIter execute the informed function against each branch in repository.
 func (g *GitRepo) branchIter(fn branchIterFn) error {
 	for _, branch := range g.sortBranches() {
 		if branch != "master" {
@@ -149,6 +148,8 @@ func (g *GitRepo) branchIter(fn branchIterFn) error {
 	return nil
 }
 
+// ModifiedFiles for a given commit and tree, check what are the files that have changed, return them
+// as string slice.
 func (g *GitRepo) ModifiedFiles(c *git.Commit, tree *git.Tree) ([]string, error) {
 	opts := &git.DiffOptions{}
 	modified := []string{}
@@ -186,6 +187,7 @@ func (g *GitRepo) ModifiedFiles(c *git.Commit, tree *git.Tree) ([]string, error)
 	return modified, nil
 }
 
+// CommitIter executed informed function on each branch commit.
 func (g *GitRepo) CommitIter(fn CommitIterFn) error {
 	return g.branchIter(func(branch string, odb *git.Odb) error {
 		head, err := g.r.Head()
@@ -244,6 +246,7 @@ func (g *GitRepo) CommitIter(fn CommitIterFn) error {
 	})
 }
 
+// LookupCommit search for informed commit id.
 func (g *GitRepo) LookupCommit(id string) (*git.Commit, error) {
 	oid, err := git.NewOid(id)
 	if err != nil {
@@ -252,6 +255,7 @@ func (g *GitRepo) LookupCommit(id string) (*git.Commit, error) {
 	return g.r.LookupCommit(oid)
 }
 
+// extractBranches given a repository, inspect branches and return as a string slice.
 func extractBranches(r *git.Repository) ([]string, error) {
 	iter, err := r.NewBranchIterator(git.BranchAll)
 	if err != nil {
@@ -270,6 +274,7 @@ func extractBranches(r *git.Repository) ([]string, error) {
 	return branchRef, err
 }
 
+// NewGitRepo instantiate git repository by cloning, and extract repository information.
 func NewGitRepo(cfg *Config, workdingDir string) (*GitRepo, error) {
 	log.Infof("Working directory at '%s'", workdingDir)
 	opts := &git.CloneOptions{
@@ -278,6 +283,10 @@ func NewGitRepo(cfg *Config, workdingDir string) (*GitRepo, error) {
 		},
 		CheckoutOpts: checkoutOpts,
 	}
+	if cfg.RelativeDir != "" {
+		opts.CheckoutOpts.Paths = []string{cfg.RelativeDir}
+	}
+	log.Infof("Cloning repository '%s'", cfg.RepoURL)
 	r, err := git.Clone(cfg.RepoURL, workdingDir, opts)
 	if err != nil {
 		return nil, err
@@ -293,7 +302,6 @@ func NewGitRepo(cfg *Config, workdingDir string) (*GitRepo, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	log.Infof("Repository branches '%v'", branches)
 	if !ContainsStringSlice(branches, "master") {
 		return nil, fmt.Errorf("can't find 'master' branch in [%v]", branches)

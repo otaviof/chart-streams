@@ -27,7 +27,7 @@ LABEL author="Devtools <devtools@redhat.com>"
 ENV LANG="en_US.utf8" \
     GIN_MODE="release"
 
-RUN yum install -y libgit2-devel && \
+RUN yum install -y git libgit2-devel && \
     rm -rf /var/cache /var/log/dnf* /var/log/yum.*
 
 COPY --from=builder \

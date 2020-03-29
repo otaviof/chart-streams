@@ -8,6 +8,7 @@ IMAGE_TAG ?= "quay.io/otaviof/$(APP):latest"
 OUTPUT_DIR ?= build
 
 RUN_ARGS ?= serve
+WORKING_DIR ?= /var/tmp/chart-streams
 COMMON_FLAGS ?= -v -mod=vendor
 
 CHARTS_REPO_ARCHIVE ?= test/charts-repo.tar.gz
@@ -59,7 +60,9 @@ image:
 
 # execute "go run" against cmd
 run:
-	go run $(COMMON_FLAGS) cmd/$(MODULE)/* $(RUN_ARGS)
+	@test -d $(WORKING_DIR) && rm -rf $(WORKING_DIR)
+	@mkdir $(WORKING_DIR)
+	go run $(COMMON_FLAGS) cmd/$(MODULE)/* $(RUN_ARGS) --working-dir=$(WORKING_DIR)
 
 # running all test targets
 test: test-unit test-e2e

@@ -178,7 +178,12 @@ func (i *IndexBuilder) inspectDirs(dirs []string, revision string, c *git.Commit
 		log.Debugf("Loading chart from '%s'...", chartAbsPath)
 		chart, err := loader.LoadDir(chartAbsPath)
 		if err != nil {
-			return err
+			log.Warnf("error loading chart: '%s'", err)
+			continue
+		}
+		if err = chart.Validate(); err != nil {
+			log.Warnf("error validating chart: '%s'", err)
+			continue
 		}
 		log.Infof("Found chart '%s' version '%s'", chart.Metadata.Name, chart.Metadata.Version)
 		i.register(chart.Metadata, revision, c, head)

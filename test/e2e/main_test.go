@@ -2,8 +2,10 @@ package e2e
 
 import (
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
 	"testing"
 	"time"
 
@@ -12,8 +14,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/otaviof/chart-streams/pkg/chartstreams"
-	"github.com/otaviof/chart-streams/pkg/chartstreams/config"
-	"github.com/otaviof/chart-streams/pkg/chartstreams/provider"
 	"github.com/otaviof/chart-streams/test/util"
 )
 
@@ -22,12 +22,17 @@ func init() {
 }
 
 // startServer run http server on background.
-func startServer(cfg *config.Config) error {
-	p := provider.NewGitChartProvider(cfg)
+func startServer(cfg *chartstreams.Config) error {
+	tempDir, err := ioutil.TempDir("", "chart-streams")
+	if err != nil {
+		return err
+	}
+	defer os.RemoveAll(tempDir)
+
+	p := chartstreams.NewGitChartProvider(cfg, tempDir)
 	if err := p.Initialize(); err != nil {
 		return err
 	}
-
 	s := chartstreams.NewServer(cfg, p)
 	go func() {
 		err := s.Start()
@@ -54,7 +59,7 @@ func serverURL(addr string) string {
 
 // waitForServer will try to reach server's root, and if fail, sleep and retry for a certain amount
 // of times.
-func waitForServer(cfg *config.Config, sleep time.Duration) error {
+func waitForServer(cfg *chartstreams.Config, sleep time.Duration) error {
 	return retry(10, sleep, func() error {
 		c := &http.Client{Timeout: 5 * time.Second}
 		_, err := c.Get(serverURL(cfg.ListenAddr))
@@ -67,7 +72,7 @@ func TestMain(t *testing.T) {
 	repoDir, err := util.ChartsRepoDir("../..")
 	require.NoError(t, err, "on discovering test repo directory dir")
 
-	cfg := &config.Config{
+	cfg := &chartstreams.Config{
 		RepoURL:     fmt.Sprintf("file://%s", repoDir),
 		RelativeDir: "/",
 		CloneDepth:  0,

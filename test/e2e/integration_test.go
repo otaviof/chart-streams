@@ -4,6 +4,8 @@ import (
 	"io/ioutil"
 	"testing"
 
+	"github.com/otaviof/chart-streams/pkg/chartstreams"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"helm.sh/helm/v3/cmd/helm/search"
@@ -11,14 +13,12 @@ import (
 	"helm.sh/helm/v3/pkg/getter"
 	helmrepo "helm.sh/helm/v3/pkg/repo"
 	"sigs.k8s.io/yaml"
-
-	"github.com/otaviof/chart-streams/pkg/chartstreams/config"
 )
 
 // IntegrationTest comprises all the steps needed to test chart-streams features. Using parts of
 // upstream Helm pkg and cmd to simulate end-users.
 type IntegrationTest struct {
-	cfg           *config.Config
+	cfg           *chartstreams.Config
 	helmChartRepo *helmrepo.ChartRepository
 	indexFile     *helmrepo.IndexFile
 }
@@ -72,6 +72,6 @@ func (i *IntegrationTest) Run(t *testing.T) {
 }
 
 // NewIntegrationTest instantiate tests.
-func NewIntegrationTest(cfg *config.Config) *IntegrationTest {
+func NewIntegrationTest(cfg *chartstreams.Config) *IntegrationTest {
 	return &IntegrationTest{cfg: cfg, indexFile: &helmrepo.IndexFile{}}
 }

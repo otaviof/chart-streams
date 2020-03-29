@@ -6,8 +6,6 @@ import (
 	"github.com/spf13/viper"
 
 	"github.com/otaviof/chart-streams/pkg/chartstreams"
-	"github.com/otaviof/chart-streams/pkg/chartstreams/config"
-	"github.com/otaviof/chart-streams/pkg/chartstreams/provider"
 )
 
 // serveCmd sub-command to represent the server.
@@ -26,6 +24,8 @@ func init() {
 	flags.String("repo-url", "https://github.com/helm/charts.git", "Helm Charts Git repository URL")
 	flags.String("relative-dir", "stable", "Relative charts directory in repository")
 	flags.String("listen-addr", ":8080", "Address to listen")
+	flags.String("working-dir", "/var/lib/chart-streams", "Git repository working directory")
+	flags.String("log-level", "info", "Log verbosity level (error, warn, info, debug, trace)")
 
 	rootCmd.AddCommand(serveCmd)
 	bindViperFlags(flags)
@@ -33,7 +33,9 @@ func init() {
 
 // runServeCmd execute chartstreams server.
 func runServeCmd(cmd *cobra.Command, args []string) {
-	cfg := &config.Config{
+	chartstreams.SetLogLevel(viper.GetString("log-level"))
+
+	cfg := &chartstreams.Config{
 		RepoURL:     viper.GetString("repo-url"),
 		CloneDepth:  viper.GetInt("clone-depth"),
 		ListenAddr:  viper.GetString("listen-addr"),
@@ -42,7 +44,7 @@ func runServeCmd(cmd *cobra.Command, args []string) {
 
 	log.Printf("Starting server with config: '%#v'", cfg)
 
-	p := provider.NewGitChartProvider(cfg)
+	p := chartstreams.NewGitChartProvider(cfg, viper.GetString("working-dir"))
 	if err := p.Initialize(); err != nil {
 		log.Fatalf("Error during chart provider initialization: '%q'", err)
 	}

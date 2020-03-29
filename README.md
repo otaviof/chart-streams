@@ -44,11 +44,11 @@ helm search ...
 
 ### Container Image
 
-The container image are stored on [quay.io/otaviof/chart-streams][quayioimage]. To run it, execute:
+The container images are stored on [quay.io/otaviof/chart-streams][quayioimage]. To run it, execute:
 
 ```sh
-podman run --publish="8080:8080" quay.io/otaviof/chart-streams:latest
-docker run --publish="8080:8080" quay.io/otaviof/chart-streams:latest
+podman run --publish=8080:8080 --tmpfs=/var/lib/chart-streams quay.io/otaviof/chart-streams:latest
+docker run --publish=8080:8080 --tmpfs=/var/lib/chart-streams quay.io/otaviof/chart-streams:latest
 ```
 
 ### Configuration
@@ -66,14 +66,26 @@ The configuration options available are:
 | relative-dir | stable                             | Relative directory in Git repository         |
 | clone-depth  | 1                                  | Amount of commits from Git repository        |
 | listen-addr  | 127.0.0.1:8080                     | Address the application will be listening on |
+| working-dir  | /var/lib/chart-streams             | Git repository working directory             |
 | log-level    | info                               | Log verbosity level                          |
+
+Parameter `repo-url` takes the protocol in consideration, therefore you can use a local Git
+repository with `--repo-url=file://path/to/local/repo`, for instance.
+
+In order to best performance results, consider always using parameter `working-dir` as a
+[tmpfs][tmpfs]. With `docker`/`podman`, a [tmpfs volume][dockertmpfs] can be informed directly on
+running a container.
 
 ### Example
 
 As a real world example, serve the last 200 commits of [charts][helmstablecharts] repository, with:
 
 ```sh
-docker run --publish="8080:8080" quay.io/otaviof/chart-streams:latest --clone-depth=200
+docker run \
+    --publish="8080:8080" \
+    --tmpfs=/var/lib/chart-streams \
+    quay.io/otaviof/chart-streams:latest \
+        --clone-depth=200
 ```
 
 Now, add `chart-streams` as a chart repository:
@@ -148,9 +160,9 @@ and version (`:version`).
 
 ## Contributing
 
-To build this project locally you will need [GNU/Make][gnumake] and [Golang][golang] installed.
-The most important targets are `make build` (default) and `make test`, in order to build and run
-project tests (unit and integration).
+To build this project locally you will need [GNU/Make][gnumake], [Golang][golang] and
+[`libgit2`][libgit2] installed. The most important [`Makefile`](./Makefile) targets are `make build`
+(default) and `make test`, in order to build and run project tests (unit and integration).
 
 ```sh
 make
@@ -160,9 +172,12 @@ make test
 Additionally, consider [`.editorconfig`](./.editorconfig) file for code standards, and
 [`.travis.yml`](./.travis.yml) for the continuous integration steps.
 
-[semver]: https://semver.org
-[helmsemver]: https://helm.sh/docs/topics/chart_best_practices/conventions
+[dockertmpfs]: https://docs.docker.com/storage/tmpfs
 [gnumake]: https://www.gnu.org/software/make
 [golang]: https://golang.org
-[quayioimage]: https://quay.io/repository/otaviof/chart-streams
+[helmsemver]: https://helm.sh/docs/topics/chart_best_practices/conventions
 [helmstablecharts]: https://github.com/helm/charts.git
+[libgit2]: https://libgit2.org
+[quayioimage]: https://quay.io/repository/otaviof/chart-streams
+[semver]: https://semver.org
+[tmpfs]: https://en.wikipedia.org/wiki/Tmpfs

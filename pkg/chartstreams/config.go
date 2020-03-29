@@ -1,4 +1,4 @@
-package config
+package chartstreams
 
 // Config application central configuration instance.
 type Config struct {

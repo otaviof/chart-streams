@@ -1,4 +1,4 @@
-package provider
+package chartstreams
 
 import (
 	"bytes"
@@ -6,24 +6,21 @@ import (
 
 	helmchart "helm.sh/helm/v3/pkg/chart"
 	helmrepo "helm.sh/helm/v3/pkg/repo"
-
-	"github.com/otaviof/chart-streams/pkg/chartstreams/chart"
-	"github.com/otaviof/chart-streams/pkg/chartstreams/config"
 )
 
 type FakeChartProvider struct {
-	cfg *config.Config
+	cfg *Config
 }
 
 func (f *FakeChartProvider) Initialize() error {
 	return nil
 }
 
-func (f *FakeChartProvider) GetChart(name, version string) (*chart.Package, error) {
-	return &chart.Package{BytesBuffer: bytes.NewBuffer([]byte("package payload"))}, nil
+func (f *FakeChartProvider) GetChart(name, version string) (*Package, error) {
+	return &Package{b: bytes.NewBuffer([]byte("package payload"))}, nil
 }
 
-func (f *FakeChartProvider) GetIndexFile() (*helmrepo.IndexFile, error) {
+func (f *FakeChartProvider) GetIndexFile() *helmrepo.IndexFile {
 	indexFile := helmrepo.NewIndexFile()
 	baseURL := fmt.Sprintf("http://%s", f.cfg.ListenAddr)
 	metadata := &helmchart.Metadata{
@@ -33,9 +30,9 @@ func (f *FakeChartProvider) GetIndexFile() (*helmrepo.IndexFile, error) {
 	}
 	indexFile.Add(metadata, "chart.tgz", baseURL, "digest")
 	indexFile.SortEntries()
-	return indexFile, nil
+	return indexFile
 }
 
-func NewFakeChartProvider(cfg *config.Config) *FakeChartProvider {
+func NewFakeChartProvider(cfg *Config) *FakeChartProvider {
 	return &FakeChartProvider{cfg: cfg}
 }

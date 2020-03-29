@@ -9,16 +9,13 @@ import (
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
 	"sigs.k8s.io/yaml"
-
-	"github.com/otaviof/chart-streams/pkg/chartstreams/config"
-	"github.com/otaviof/chart-streams/pkg/chartstreams/provider"
 )
 
 // Server represents the chartstreams server offering its API. The server puts together the routes,
 // and bootstrap steps in order to respond as a valid Helm repository.
 type Server struct {
-	cfg           *config.Config
-	chartProvider provider.ChartProvider
+	cfg           *Config
+	chartProvider ChartProvider
 }
 
 // RootHandler returns a simple string.
@@ -28,14 +25,8 @@ func (s *Server) RootHandler(c *gin.Context) {
 
 // IndexHandler endpoint handler to marshal and return index yaml payload.
 func (s *Server) IndexHandler(c *gin.Context) {
-	index, err := s.chartProvider.GetIndexFile()
-	if err != nil {
-		_ = c.AbortWithError(500, err)
-		return
-	}
-
-	// rendering yaml using k8s approach
-	b, err := yaml.Marshal(index)
+	indexFile := s.chartProvider.GetIndexFile()
+	b, err := yaml.Marshal(indexFile)
 	if err != nil {
 		_ = c.AbortWithError(500, err)
 		return
@@ -43,8 +34,7 @@ func (s *Server) IndexHandler(c *gin.Context) {
 
 	c.Status(http.StatusOK)
 	c.Header("Content-Type", "application/x-yaml; charset=utf-8")
-	_, err = c.Writer.Write(b)
-	if err != nil {
+	if _, err = c.Writer.Write(b); err != nil {
 		_ = c.AbortWithError(500, err)
 		return
 	}
@@ -86,6 +76,6 @@ func (s *Server) Start() error {
 }
 
 // NewServer instantiate server.
-func NewServer(cfg *config.Config, chartProvider provider.ChartProvider) *Server {
+func NewServer(cfg *Config, chartProvider ChartProvider) *Server {
 	return &Server{cfg: cfg, chartProvider: chartProvider}
 }

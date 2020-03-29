@@ -1,28 +1,37 @@
-package provider
+package chartstreams
 
 import (
 	"fmt"
+	"io/ioutil"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/otaviof/chart-streams/pkg/chartstreams/config"
 	"github.com/otaviof/chart-streams/test/util"
 )
 
+func init() {
+	SetLogLevel("trace")
+}
+
 func TestGitChartProvider(t *testing.T) {
 	helmChartName := "one"
-	helmRepoDir, err := util.ChartsRepoDir("../../..")
+	helmRepoDir, err := util.ChartsRepoDir("../..")
 	require.NoError(t, err, "on discovering test repo directory dir")
 	helmRepoURL := fmt.Sprintf("file://%s", helmRepoDir)
 
-	config := &config.Config{
+	tempDir, err := ioutil.TempDir("", "chart-streams")
+	require.NoError(t, err)
+	defer os.RemoveAll(tempDir)
+
+	cfg := &Config{
 		RepoURL:     helmRepoURL,
 		RelativeDir: "/",
 		CloneDepth:  1,
 	}
-	g := NewGitChartProvider(config)
+	g := NewGitChartProvider(cfg, tempDir)
 
 	t.Run("Initialize", func(t *testing.T) {
 		err := g.Initialize()
@@ -31,8 +40,7 @@ func TestGitChartProvider(t *testing.T) {
 
 	var helmChartVersion string
 	t.Run("GetIndexFile", func(t *testing.T) {
-		index, err := g.GetIndexFile()
-		assert.NoError(t, err)
+		index := g.GetIndexFile()
 		assert.NotNil(t, index)
 		assert.True(t, len(index.Entries) > 0)
 

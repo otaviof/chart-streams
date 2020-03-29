@@ -9,14 +9,11 @@ import (
 	helmchart "helm.sh/helm/v3/pkg/chart"
 	helmrepo "helm.sh/helm/v3/pkg/repo"
 	"sigs.k8s.io/yaml"
-
-	"github.com/otaviof/chart-streams/pkg/chartstreams/config"
-	"github.com/otaviof/chart-streams/pkg/chartstreams/provider"
 )
 
 func TestServer(t *testing.T) {
-	cfg := &config.Config{ListenAddr: "127.0.0.1:8080"}
-	p := provider.NewFakeChartProvider(cfg)
+	cfg := &Config{ListenAddr: "127.0.0.1:8080"}
+	p := NewFakeChartProvider(cfg)
 	s := NewServer(cfg, p)
 	g := s.SetupRoutes()
 

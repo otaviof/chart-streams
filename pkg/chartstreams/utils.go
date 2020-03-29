@@ -1,4 +1,4 @@
-package utils
+package chartstreams
 
 // ContainsStringSlice given a string slice and a string, returns boolean when is contained.
 func ContainsStringSlice(slice []string, str string) bool {

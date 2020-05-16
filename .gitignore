@@ -2,5 +2,5 @@
 .vscode
 .idea
 .data
-build/
+_output/
 vendor/

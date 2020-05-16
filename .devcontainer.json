@@ -2,7 +2,8 @@
     "name": "chart-streams",
     "dockerFile": "./Dockerfile.dev",
     "runArgs": [
-        "--name", "chart-streams"
+        "--name", "chart-streams",
+        "--env", "OUTPUT_DIR=_output"
     ],
     "settings": {
         "git.path": "/usr/bin/git",

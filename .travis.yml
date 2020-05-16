@@ -2,10 +2,8 @@
 language: go
 go:
   - 1.14.x
-before_script:
+install:
   - make vendor
+  - make devcontainer-image
 script:
-  - make
-  - make test
-after_success:
-  - make codecov
+  - make devcontainer-run DEVCONTAINER_ARGS='make build test codecov'

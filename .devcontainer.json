@@ -1,0 +1,19 @@
+{
+    "name": "chart-streams",
+    "dockerFile": "./Dockerfile.dev",
+    "runArgs": [
+        "--name", "chart-streams"
+    ],
+    "settings": {
+        "git.path": "/usr/bin/git",
+        "terminal.integrated.shell.linux": "/bin/bash",
+        "remote.extensionKind": {
+            "ms-azuretools.vscode-docker": "workspace"
+        }
+    },
+    "extensions": [
+        "ms-vscode.go",
+        "oderwat.indent-rainbow",
+        "streetsidesoftware.code-spell-checker"
+    ]
+}

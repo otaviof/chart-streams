@@ -1,0 +1,9 @@
+FROM registry.fedoraproject.org/fedora:latest
+
+COPY hack /src/hack
+COPY Makefile /src
+WORKDIR  /src
+
+RUN yum install --assumeyes make && \
+    make devcontainer-deps && \
+    rm -rf /src

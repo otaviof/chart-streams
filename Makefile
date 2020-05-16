@@ -1,13 +1,16 @@
-# application name
 APP ?= chart-streams
-# sanitizing app variable to become a valid go module name
 MODULE = $(subst -,,$(APP))
-# container image tag
-IMAGE_TAG ?= "quay.io/otaviof/$(APP):latest"
-# build directory
-OUTPUT_DIR ?= build
 
+IMAGE = quay.io/otaviof/$(APP)
+IMAGE_TAG = $(IMAGE):latest
+IMAGE_DEV_TAG = $(IMAGE)-dev:latest
+
+OUTPUT_DIR ?= _output
+
+DEVCONTAINER_ARGS ?=
 RUN_ARGS ?= serve
+TEST_ARGS ?=
+
 WORKING_DIR ?= /var/tmp/chart-streams
 COMMON_FLAGS ?= -v -mod=vendor
 
@@ -16,13 +19,18 @@ CHARTS_REPO_DIR ?= $(OUTPUT_DIR)/charts-repo
 
 TEST_TIMEOUT ?= 3m
 TEST_FLAGS ?= -failfast -timeout=$(TEST_TIMEOUT)
+
+UNIT_TEST_TARGET ?= ./cmd/... ./pkg/...
+E2E_TEST_TARGET ?= ./test/e2e/...
+
 CODECOV_TOKEN ?=
 COVERAGE_DIR ?= $(OUTPUT_DIR)/coverage
 
-# used in `codecov.sh` script
-export OUTPUT_DIR
-export COVERAGE_DIR
-export CODECOV_TOKEN
+# libgit2 version, installed on devcontainer and application image
+LIBGIT2_VERSION ?= 0.28
+
+# all variables are exported to environment
+.EXPORT_ALL_VARIABLES:
 
 default: build
 
@@ -51,8 +59,43 @@ prepare: unarchive-charts-repo
 	@mkdir -p $(COVERAGE_DIR) > /dev/null 2>&1 || true
 
 # build application command-line
-build: prepare vendor
+build: prepare vendor $(OUTPUT_DIR)/$(APP)
+
+# application binary
+$(OUTPUT_DIR)/$(APP):
 	go build $(COMMON_FLAGS) -o="$(OUTPUT_DIR)/$(APP)" cmd/$(MODULE)/*
+
+# installs all development dependencies in the development container
+devcontainer-deps:
+	./hack/fedora.sh
+	./hack/golang.sh
+	./hack/libgit2.sh
+	./hack/libgit2-devel.sh
+	./hack/yum-clean-up.sh
+
+# build devcontainer image
+devcontainer-image:
+	docker build --tag="$(IMAGE_DEV_TAG)" --file="Dockerfile.dev" .
+
+# execute devcontainer mounting local project directory
+devcontainer-run:
+	docker run \
+		--rm \
+		--interactive \
+		--tty \
+		--volume="${PWD}:/src/$(APP)" \
+		--workdir="/src/$(APP)" \
+		$(IMAGE_DEV_TAG) $(DEVCONTAINER_ARGS)
+
+# start a bash shell in devcontainer
+devcontainer-exec:
+	@docker exec --interactive --tty --workdir="/workspaces/$(APP)" $(APP) bash
+
+# installs final application image dependencies
+image-deps:
+	./hack/fedora.sh
+	./hack/libgit2.sh
+	./hack/yum-clean-up.sh
 
 # build container image with Docker
 image:
@@ -74,8 +117,8 @@ test-unit: prepare
 		$(COMMON_FLAGS) \
 		$(TEST_FLAGS) \
 		-coverprofile=$(COVERAGE_DIR)/coverage-unit.txt \
-		./cmd/... \
-		./pkg/...
+		$(TEST_ARGS) \
+		$(UNIT_TEST_TARGET) \
 
 # run end-to-end tests
 .PHONY: test-e2e
@@ -84,7 +127,7 @@ test-e2e: prepare
 		$(COMMON_FLAGS) \
 		$(TEST_FLAGS) \
 		-coverprofile=$(COVERAGE_DIR)/coverage-e2e.txt \
-		./test/...
+		$(E2E_TEST_TARGET)
 
 # codecov.io test coverage report
 codecov:

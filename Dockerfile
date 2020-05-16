@@ -1,37 +1,29 @@
-FROM golang:1.14 AS builder
+FROM registry.fedoraproject.org/fedora:latest AS builder
 
-ENV LANG="en_US.utf8" \
-    GIT_COMMITTER_NAME="devtools" \
-    GIT_COMMITTER_EMAIL="devtools@redhat.com"
+COPY . /src
+WORKDIR /src
 
-RUN echo "deb http://http.us.debian.org/debian/ testing non-free contrib main" >> /etc/apt/sources.list && \
-    apt-get update && \
-    apt-get install -y -t="testing" libgit2-dev
-
-WORKDIR /go/src/github.com/otaviof/chart-streams
-
-COPY . .
-
-RUN make
+RUN yum install --assumeyes make && \
+    make devcontainer-deps && \
+    make
 
 #
 # Application Image
 #
 
-FROM fedora:latest
+FROM registry.fedoraproject.org/fedora:latest
 
-LABEL com.redhat.delivery.appregistry="true"
-LABEL maintainer="Devtools <devtools@redhat.com>"
-LABEL author="Devtools <devtools@redhat.com>"
+COPY hack /src/hack
+COPY Makefile /src
 
-ENV LANG="en_US.utf8" \
-    GIN_MODE="release"
-
-RUN yum install -y git libgit2-devel && \
-    rm -rf /var/cache /var/log/dnf* /var/log/yum.*
+RUN cd /src && \
+    yum install --assumeyes make && \
+    make image-deps && \
+    rm -rf /src && \
+    yum autoremove --assumeyes make
 
 COPY --from=builder \
-    /go/src/github.com/otaviof/chart-streams/build/chart-streams \
+    /src/_output/chart-streams \
     /usr/local/bin/chart-streams
 
 USER 10001

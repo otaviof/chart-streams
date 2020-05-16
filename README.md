@@ -160,12 +160,29 @@ and version (`:version`).
 
 ## Contributing
 
-To build this project locally you will need [GNU/Make][gnumake], [Golang][golang] and
-[`libgit2`][libgit2] installed. The most important [`Makefile`](./Makefile) targets are `make build`
-(default) and `make test`, in order to build and run project tests (unit and integration).
+All development dependencies are located at [`Dockerfile.dev`][./Dockerfile.dev]. To use it, run:
+
+```sh
+make devcontainer-image
+make devcontainer-run DEVCONTAINER_ARGS='bash -l'
+```
+
+For [Visual Studio Code][vscode] users, install [Remote Containers extension][vscodecontainers],
+and re-open the project in the container. Please consider [`.devcontainer.json`][.devcontainer.json]
+for details.
+
+### Building and Testing
+
+Building the application requires [`libgit2`][libgit2] installed, please consider `Dockerfile.dev`
+for details. In order to build the project run:
 
 ```sh
 make
+```
+
+And in order to run automated tests, execute:
+
+```sh
 make test
 ```
 
@@ -181,3 +198,5 @@ Additionally, consider [`.editorconfig`](./.editorconfig) file for code standard
 [quayioimage]: https://quay.io/repository/otaviof/chart-streams
 [semver]: https://semver.org
 [tmpfs]: https://en.wikipedia.org/wiki/Tmpfs
+[vscode]: https://code.visualstudio.com/
+[vscodecontainers]: https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers

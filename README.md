@@ -163,8 +163,12 @@ and version (`:version`).
 All development dependencies are located at [`Dockerfile.dev`][./Dockerfile.dev]. To use it, run:
 
 ```sh
+# build development image
 make devcontainer-image
-make devcontainer-run DEVCONTAINER_ARGS='bash -l'
+# start shell
+make devcontainer-run
+# execute an arbitrary command
+make devcontainer-run DEVCONTAINER_ARGS='make test'
 ```
 
 For [Visual Studio Code][vscode] users, install [Remote Containers extension][vscodecontainers],

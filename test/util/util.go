@@ -1,6 +1,7 @@
 package util
 
 import (
+	"fmt"
 	"os"
 	"path"
 )
@@ -12,5 +13,10 @@ func ChartsRepoDir(relativeTo string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return path.Join(cwd, path.Join(relativeTo, "build/charts-repo")), nil
+
+	outputDir := os.Getenv("OUTPUT_DIR")
+	if outputDir == "" {
+		return "", fmt.Errorf("output directory is not defined in environment")
+	}
+	return path.Join(cwd, path.Join(relativeTo, path.Join(outputDir, "charts-repo"))), nil
 }

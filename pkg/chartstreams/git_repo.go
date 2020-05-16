@@ -286,7 +286,7 @@ func NewGitRepo(cfg *Config, workdingDir string) (*GitRepo, error) {
 	if cfg.RelativeDir != "" {
 		opts.CheckoutOpts.Paths = []string{cfg.RelativeDir}
 	}
-	log.Infof("Cloning repository '%s'", cfg.RepoURL)
+	log.Infof("Cloning repository '%s' on '%s'", cfg.RepoURL, workdingDir)
 	r, err := git.Clone(cfg.RepoURL, workdingDir, opts)
 	if err != nil {
 		return nil, err

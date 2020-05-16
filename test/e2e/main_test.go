@@ -67,10 +67,11 @@ func waitForServer(cfg *chartstreams.Config, sleep time.Duration) error {
 	})
 }
 
-// TestMain main integration test entry point.
+// TestMain main integration test entry point	.
 func TestMain(t *testing.T) {
 	repoDir, err := util.ChartsRepoDir("../..")
 	require.NoError(t, err, "on discovering test repo directory dir")
+	t.Logf("Charts repository directory: '%s'", repoDir)
 
 	cfg := &chartstreams.Config{
 		RepoURL:     fmt.Sprintf("file://%s", repoDir),

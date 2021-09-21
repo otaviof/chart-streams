@@ -10,7 +10,7 @@ import (
 	"helm.sh/helm/v3/pkg/chart/loader"
 	helmrepo "helm.sh/helm/v3/pkg/repo"
 
-	git "github.com/libgit2/git2go/v28"
+	git "github.com/libgit2/git2go/v31"
 	log "github.com/sirupsen/logrus"
 	helmchart "helm.sh/helm/v3/pkg/chart"
 )

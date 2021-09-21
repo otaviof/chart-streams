@@ -26,9 +26,6 @@ E2E_TEST_TARGET ?= ./test/e2e/...
 CODECOV_TOKEN ?=
 COVERAGE_DIR ?= $(OUTPUT_DIR)/coverage
 
-# libgit2 version, installed on devcontainer and application image
-LIBGIT2_VERSION ?= 0.28
-
 # all variables are exported to environment
 .EXPORT_ALL_VARIABLES:
 

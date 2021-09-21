@@ -13,8 +13,9 @@
         }
     },
     "extensions": [
-        "ms-vscode.go",
-        "oderwat.indent-rainbow",
-        "streetsidesoftware.code-spell-checker"
-    ]
+		"ms-vscode.go",
+		"oderwat.indent-rainbow",
+		"streetsidesoftware.code-spell-checker",
+		"golang.go"
+	]
 }

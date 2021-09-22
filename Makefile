@@ -72,7 +72,7 @@ devcontainer-deps:
 	./hack/libgit2.sh
 	./hack/libgit2-devel.sh
 	./hack/yum-clean-up.sh
-
+	./hack/helm.sh
 # build devcontainer image
 devcontainer-image:
 	docker build --tag="$(IMAGE_DEV_TAG)" --file="Dockerfile.dev" .

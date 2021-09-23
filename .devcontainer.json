@@ -16,6 +16,8 @@
 		"ms-vscode.go",
 		"oderwat.indent-rainbow",
 		"streetsidesoftware.code-spell-checker",
-		"golang.go"
+		"golang.go",
+		"eamodio.gitlens",
+		"github.vscode-pull-request-github"
 	]
 }

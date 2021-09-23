@@ -129,3 +129,7 @@ test-e2e: prepare
 # codecov.io test coverage report
 codecov:
 	./hack/codecov.sh
+
+.PHONY: lint
+lint:
+	@golangci-lint run

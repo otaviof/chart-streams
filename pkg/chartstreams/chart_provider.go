@@ -54,19 +54,19 @@ func (g *GitChartProvider) GetChart(name string, version string) (*Package, erro
 
 	c, err := g.gitRepo.LookupCommit(commitInfo.ID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("looking up commit %q: %w", commitInfo.ID, err)
 	}
 	if err = g.gitRepo.CheckoutCommit(commitInfo.Revision, c); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("checking out commit %q: %w", commitInfo.ID, err)
 	}
 
 	absPath := g.indexBuilder.ChartAbsPath(name)
 	p, err := NewPackage(absPath, commitInfo.Time)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("instantiating package in %q: %w", absPath, err)
 	}
 	if err = p.Build(); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("building package for %q: %w", absPath, err)
 	}
 	return p, nil
 }

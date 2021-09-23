@@ -67,10 +67,10 @@ func (g *GitRepo) lookupBranch(branch string) (*git.Branch, error) {
 func (g *GitRepo) checkoutTree(oid *git.Oid) (*git.Tree, error) {
 	tree, err := g.r.LookupTree(oid)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("looking up tree %q: %w", oid, err)
 	}
 	if err = g.r.CheckoutTree(tree, checkoutOpts); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("checking out tree %q: %w", oid, err)
 	}
 	return tree, nil
 }
@@ -163,19 +163,21 @@ func (g *GitRepo) ModifiedFiles(c *git.Commit, tree *git.Tree) ([]string, error)
 		log.Debugf("Looking up parent commit-id '%s'", parentID.String())
 		parent, err := g.r.LookupCommit(parentID)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("looking up parent commit-id %q: %w", parentID.String(), err)
 		}
 		defer parent.Free()
 
 		parentTree, err := parent.Tree()
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("looking up parent's commit-id %q tree: %w", parentID.String(), err)
 		}
 		defer parentTree.Free()
 
 		diff, err := g.r.DiffTreeToTree(parentTree, tree, opts)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf(
+				"creating diff between parent's commit-id %q and %q: %w",
+				parentID.String(), c.Id().String(), err)
 		}
 		defer diff.Free()
 
@@ -250,22 +252,27 @@ func (g *GitRepo) CommitIter(fn CommitIterFn) error {
 func (g *GitRepo) LookupCommit(id string) (*git.Commit, error) {
 	oid, err := git.NewOid(id)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("creating Oid for %q: %w", id, err)
 	}
-	return g.r.LookupCommit(oid)
+
+	c, err := g.r.LookupCommit(oid)
+	if err != nil {
+		err = fmt.Errorf("looking up commit %q: %w", id, err)
+	}
+	return c, err
 }
 
 // extractBranches given a repository, inspect branches and return as a string slice.
 func extractBranches(r *git.Repository) ([]string, error) {
 	iter, err := r.NewBranchIterator(git.BranchAll)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("creating branch iterator: %w", err)
 	}
 	branchRef := []string{}
 	err = iter.ForEach(func(branch *git.Branch, branchType git.BranchType) error {
 		name, err := branch.Name()
 		if err != nil {
-			return err
+			return fmt.Errorf("obtaining branch name: %w", err)
 		}
 		name = strings.TrimPrefix(name, originPrefix)
 		branchRef = append(branchRef, name)
@@ -289,20 +296,21 @@ func NewGitRepo(cfg *Config, workdingDir string) (*GitRepo, error) {
 	log.Infof("Cloning repository '%s' on '%s'", cfg.RepoURL, workdingDir)
 	r, err := git.Clone(cfg.RepoURL, workdingDir, opts)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("cloning repository %q on %q: %w", cfg.RepoURL, workdingDir, err)
 	}
 
 	head, err := r.Head()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("obtaining repository's head: %w", err)
 	}
 	defer head.Free()
 
 	branches, err := extractBranches(r)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("extracting branches: %w", err)
 	}
 	log.Infof("Repository branches '%v'", branches)
+	// TODO: make the main branch configurable instead of "master"
 	if !ContainsStringSlice(branches, "master") {
 		return nil, fmt.Errorf("can't find 'master' branch in [%v]", branches)
 	}

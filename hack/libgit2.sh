@@ -9,5 +9,4 @@ yum install \
     --assumeyes \
     --nogpgcheck \
     --allowerasing \
-    --enablerepo=rawhide \
     libgit2

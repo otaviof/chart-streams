@@ -9,7 +9,6 @@ yum install \
     --assumeyes \
     --nogpgcheck \
     --allowerasing \
-    --enablerepo=rawhide \
     golang
 
 GOLANGCI_LINT_VERSION=${GOLANGCI_LINT_VERSION:-1.42.1}

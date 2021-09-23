@@ -268,6 +268,9 @@ func extractBranches(r *git.Repository) ([]string, error) {
 			return err
 		}
 		name = strings.TrimPrefix(name, originPrefix)
+		if name == "HEAD" {
+			return nil
+		}
 		branchRef = append(branchRef, name)
 		return nil
 	})

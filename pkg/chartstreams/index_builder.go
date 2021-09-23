@@ -20,8 +20,7 @@ type commitInfoMap map[*helmchart.Metadata]*CommitInfo
 
 // Index represent a chart index of some sort.
 type Index struct {
-	IndexFile      *helmrepo.IndexFile // repository index-file
-	metadataCommit commitInfoMap       // map of chart and git repository metadata
+	IndexFile *helmrepo.IndexFile // repository index-file
 }
 
 // IndexBuilder navigate the repository commits in order to discover charts, and store the
@@ -186,7 +185,18 @@ func (i *IndexBuilder) inspectDirs(dirs []string, revision string, c *git.Commit
 			continue
 		}
 		log.Infof("Found chart '%s' version '%s'", chart.Metadata.Name, chart.Metadata.Version)
-		i.register(chart.Metadata, revision, c, head)
+
+		// TODO(isutton): Return the first error returned in the loop.
+		_ = i.register(chart.Metadata, revision, c, head)
+
+		// NOTE(isutton): I was tempted to change the behavior of this method
+		// with the code that follows, but changed my mind; this will stay
+		// for my future self's convenience.
+		//
+		// err = i.register(chart.Metadata, revision, c, head)
+		// if err != nil {
+		// 	return err
+		// }
 	}
 	return nil
 }
@@ -222,7 +232,18 @@ func (i *IndexBuilder) Build() (*helmrepo.IndexFile, error) {
 	for metadata, commitInfo := range i.metadataCommit {
 		baseUrl := fmt.Sprintf("/chart/%s/%s", metadata.Name, metadata.Version)
 		log.Infof("Adding '%s/%s' (%s) to index file", metadata.Name, metadata.Version, baseUrl)
-		indexFile.Add(metadata, "chart.tgz", baseUrl, commitInfo.Digest)
+		// FIXME(isutton): decide what to do with the error returned by MustAdd.
+		_ = indexFile.MustAdd(metadata, "chart.tgz", baseUrl, commitInfo.Digest)
+
+		// NOTE(isutton): I'm not convinced that just throwing the error up
+		// is the right approach, as this would hang the builder at any
+		// commit that might produce an error. As there might be different
+		// approaches this change doesn't belong to this changeset and is
+		// kept as reference.
+		// err := indexFile.MustAdd(metadata, "chart.tgz", baseUrl, commitInfo.Digest)
+		// if err != nil {
+		// 	return nil, err
+		// }
 	}
 	indexFile.SortEntries()
 	return indexFile, nil

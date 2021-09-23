@@ -1,5 +1,7 @@
 ---
 language: go
+services:
+  - docker
 go:
   - 1.14.x
 install:

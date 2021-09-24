@@ -7,3 +7,5 @@ WORKDIR  /src
 RUN yum install --assumeyes make && \
     make devcontainer-deps && \
     rm -rf /src
+
+RUN mkdir -p -m 0777 /build

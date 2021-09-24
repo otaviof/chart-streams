@@ -80,7 +80,7 @@ devcontainer-run:
 		--rm \
 		--interactive \
 		--tty \
-		--tmpfs="/tmp" \
+		--mount type=tmpfs,destination=/tmp,tmpfs-mode=1770 \
 		--volume="${PWD}:/src/$(APP)" \
 		--workdir="/src/$(APP)" \
 		$(IMAGE_DEV_TAG) $(DEVCONTAINER_ARGS)

@@ -5,7 +5,7 @@ go 1.14
 require (
 	github.com/gin-gonic/contrib v0.0.0-20191209060500-d6e26eeaa607
 	github.com/gin-gonic/gin v1.7.0
-	github.com/libgit2/git2go/v28 v28.4.0
+	github.com/libgit2/git2go/v31 v31.6.1
 	github.com/sirupsen/logrus v1.8.1
 	github.com/spf13/cobra v1.1.3
 	github.com/spf13/pflag v1.0.5

@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	git "github.com/libgit2/git2go/v28"
+	git "github.com/libgit2/git2go/v31"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -36,7 +36,7 @@ type branchIterFn func(string, *git.Odb) error
 const originPrefix = "origin/"
 
 // checkoutOpts common checkout options, to force and keep a clean tree.
-var checkoutOpts = &git.CheckoutOpts{Strategy: git.CheckoutForce | git.CheckoutRemoveUntracked}
+var checkoutOpts = &git.CheckoutOptions{Strategy: git.CheckoutForce | git.CheckoutRemoveUntracked}
 
 // sortBranches will sort local list of branches, skipping "master".
 func (g *GitRepo) sortBranches() []string {
@@ -268,6 +268,9 @@ func extractBranches(r *git.Repository) ([]string, error) {
 			return err
 		}
 		name = strings.TrimPrefix(name, originPrefix)
+		if name == "HEAD" {
+			return nil
+		}
 		branchRef = append(branchRef, name)
 		return nil
 	})
@@ -297,6 +300,11 @@ func NewGitRepo(cfg *Config, workdingDir string) (*GitRepo, error) {
 		return nil, err
 	}
 	defer head.Free()
+
+	err = r.CheckoutHead(&git.CheckoutOptions{Strategy: git.CheckoutForce | git.CheckoutRecreateMissing})
+	if err != nil {
+		return nil, err
+	}
 
 	branches, err := extractBranches(r)
 	if err != nil {

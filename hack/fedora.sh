@@ -7,3 +7,5 @@ set -eu
 
 yum install --assumeyes \
     fedora-repos-rawhide
+
+yum makecache

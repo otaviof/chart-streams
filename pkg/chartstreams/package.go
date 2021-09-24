@@ -94,7 +94,7 @@ func (p *Package) Build() error {
 func NewPackage(dir string, t *time.Time) (*Package, error) {
 	chart, err := loader.LoadDir(dir)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("loading chart from %q: %w", dir, err)
 	}
 	return &Package{
 		dir:   dir,

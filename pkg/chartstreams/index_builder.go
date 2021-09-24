@@ -57,7 +57,7 @@ func (i *IndexBuilder) ChartAbsPath(name string) string {
 func (i *IndexBuilder) listAllChartDirs() ([]string, error) {
 	dirs, err := ioutil.ReadDir(i.basePath())
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("reading base path %q: %w", i.basePath(), err)
 	}
 
 	var chartDirs []string
@@ -85,7 +85,7 @@ func (i *IndexBuilder) relativeDir() string {
 func (i *IndexBuilder) listModifiedChartDirs(c *git.Commit, tree *git.Tree) ([]string, error) {
 	modified, err := i.g.ModifiedFiles(c, tree)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("obtaining modified files for commit-id %q: %w", c.Id(), err)
 	}
 
 	relativeDir := i.relativeDir()
@@ -215,7 +215,7 @@ func (i *IndexBuilder) walk() error {
 // Build create instance of index-file by inspecting commits.
 func (i *IndexBuilder) Build() (*helmrepo.IndexFile, error) {
 	if err := i.walk(); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("walking the repository: %w", err)
 	}
 
 	indexFile := helmrepo.NewIndexFile()

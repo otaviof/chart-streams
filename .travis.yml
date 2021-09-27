@@ -1,8 +1,0 @@
----
-services:
-  - docker
-install:
-  - make devcontainer-image
-  - make devcontainer-run DEVCONTAINER_ARGS='go env'
-script:
-  - make devcontainer-run DEVCONTAINER_ARGS='make build test codecov'

@@ -1,0 +1,12 @@
+name: chart-streams
+on: [push]
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: docker/setup-buildx-action@v1
+        with:
+          install: true
+      - run: make devcontainer-image
+      - run: make devcontainer-run DEVCONTAINER_ARGS='make build test codecov'

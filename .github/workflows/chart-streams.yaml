@@ -19,7 +19,7 @@ jobs:
           context: .
           push: true
           file: Dockerfile.dev
-          tags: localhost:5000/otaviof/chart-streams-dev:latest
-      - run: make devcontainer-run IMAGE_DEV_TAG='localhost:5000/otaviof/chart-streams-dev:latest' DEVCONTAINER_ARGS="make CODECOV_TOKEN='${CODECOV_TOKEN}' build test codecov"
+          tags: ghcr.io/isutton/chart-streams-dev:latest
+      - run: make devcontainer-run IMAGE_DEV_TAG="ghcr.io/isutton/chart-streams-dev:latest" DEVCONTAINER_ARGS="make CODECOV_TOKEN='${CODECOV_TOKEN}' build test codecov"
         env:
           CODECOV_TOKEN: ${{secrets.CODECOV_TOKEN}}

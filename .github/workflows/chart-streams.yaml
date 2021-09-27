@@ -4,7 +4,7 @@ on: [push]
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
-  IMAGE_DEV_TAG: ghcr.io/${{ github.repository }}:${{ github.sha }}
+  IMAGE_DEV_TAG: ghcr.io/${{ github.repository }}:latest
 
 jobs:
   build-and-test:
@@ -35,5 +35,4 @@ jobs:
           tags: ${{ env.IMAGE_DEV_TAG }}
       - run: make devcontainer-run IMAGE_DEV_TAG="$IMAGE_DEV_TAG" DEVCONTAINER_ARGS="make build test codecov"
         env:
-          GITHUB_SHA: ${{ github.sha }}
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}

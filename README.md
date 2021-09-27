@@ -8,7 +8,7 @@
     <a alt="GoDoc" href="https://godoc.org/github.com/otaviof/chart-streams/pkg/chartstreams">
         <img alt="GoDoc Reference" src="https://godoc.org/github.com/otaviof/chart-streams/pkg/chartstreams?status.svg">
     </a>
-    <a href="https://github.com/isutton/chart-streams/actions/workflows/chart-streams.yaml">
+    <a alt="GitHub Status" href="https://github.com/isutton/chart-streams/actions/workflows/chart-streams.yaml">
         <img alt="GitHub Status" src="https://github.com/isutton/chart-streams/actions/workflows/chart-streams.yaml/badge.svg">
     </a>
     </a>

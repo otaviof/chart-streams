@@ -8,13 +8,15 @@
     <a alt="GoDoc" href="https://godoc.org/github.com/otaviof/chart-streams/pkg/chartstreams">
         <img alt="GoDoc Reference" src="https://godoc.org/github.com/otaviof/chart-streams/pkg/chartstreams?status.svg">
     </a>
-    <a alt="CI Status" href="https://travis-ci.com/otaviof/chart-streams">
-        <img alt="CI Status" src="https://travis-ci.com/otaviof/chart-streams.svg?branch=master">
+    <a href="https://github.com/isutton/chart-streams/actions/workflows/chart-streams.yaml">
+        <img alt="GitHub Status" src="https://github.com/isutton/chart-streams/actions/workflows/chart-streams.yaml/badge.svg">
+    </a>
     </a>
     <a alt="Image Build Status" href="https://quay.io/repository/otaviof/chart-streams">
         <img alt="Image Build Status" src="https://quay.io/repository/otaviof/chart-streams/status">
     </a>
 </p>
+
 
 # `chart-streams`
 

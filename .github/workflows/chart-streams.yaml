@@ -4,6 +4,7 @@ on: [push]
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
+  IMAGE_DEV_TAG: ghcr.io/${{ github.repository }}:${{ github.sha }}
 
 jobs:
   build-and-test:
@@ -31,7 +32,8 @@ jobs:
           context: .
           push: true
           file: Dockerfile.dev
-          tags: ghcr.io/isutton/chart-streams-dev:latest
-      - run: make devcontainer-run IMAGE_DEV_TAG="ghcr.io/isutton/chart-streams-dev:latest" DEVCONTAINER_ARGS="make CODECOV_TOKEN='${CODECOV_TOKEN}' build test codecov"
+          tags: ${{ env.IMAGE_DEV_TAG }}
+      - run: make devcontainer-run IMAGE_DEV_TAG="$IMAGE_DEV_TAG" DEVCONTAINER_ARGS="make build test codecov"
         env:
-          CODECOV_TOKEN: ${{secrets.CODECOV_TOKEN}}
+          GITHUB_SHA: ${{ github.sha }}
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}

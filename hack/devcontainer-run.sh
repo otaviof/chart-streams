@@ -3,7 +3,6 @@
 docker run \
     --rm \
     --interactive \
-    --tty \
     --env GOTMPDIR=/build \
     --volume="${PWD}:/src/${APP}" \
     --workdir="/src/${APP}" \

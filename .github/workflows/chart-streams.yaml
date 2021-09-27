@@ -1,6 +1,7 @@
 name: chart-streams
 on: [push]
 
+
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
@@ -8,6 +9,8 @@ env:
 
 jobs:
   build-and-test:
+    environment:
+      name: build
     runs-on: ubuntu-latest
     services:
       registry:

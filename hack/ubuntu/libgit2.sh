@@ -40,4 +40,4 @@ echo "# Remmoving temporary director '${TMPDIR}'"
 cd /tmp && rm -rf "${TMPDIR}"
 
 echo "# Installed:"
-ls -l "${LIBGIT_PREFIX}/lib/libgit2.so.${LIBGIT_VERSION}"
+ls -lR "${LIBGIT_PREFIX}"

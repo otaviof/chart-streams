@@ -8,13 +8,15 @@
     <a alt="GoDoc" href="https://godoc.org/github.com/otaviof/chart-streams/pkg/chartstreams">
         <img alt="GoDoc Reference" src="https://godoc.org/github.com/otaviof/chart-streams/pkg/chartstreams?status.svg">
     </a>
-    <a alt="CI Status" href="https://travis-ci.com/otaviof/chart-streams">
-        <img alt="CI Status" src="https://travis-ci.com/otaviof/chart-streams.svg?branch=master">
+    <a alt="GitHub Status" href="https://github.com/isutton/chart-streams/actions/workflows/chart-streams.yaml">
+        <img alt="GitHub Status" src="https://github.com/isutton/chart-streams/actions/workflows/chart-streams.yaml/badge.svg">
+    </a>
     </a>
     <a alt="Image Build Status" href="https://quay.io/repository/otaviof/chart-streams">
         <img alt="Image Build Status" src="https://quay.io/repository/otaviof/chart-streams/status">
     </a>
 </p>
+
 
 # `chart-streams`
 
@@ -124,10 +126,10 @@ helm install grafana cs/grafana:2.0.2-revert-10682-master-fa4468c8
 
 ## Semantic Versioning
 
-Git repository tree is transversed commit-by-commit starting from latest. On transversing the
+Git repository tree is traversed commit-by-commit starting from latest. On traversing the
 commits `chart-streams` will identify from which branch each change is coming from, and with this
 information publish stable and development versions of Helm-Charts, adding
-[semanatic versioning][semver] representation [understood by Helm][helmsemver].
+[semantic versioning][semver] representation [understood by Helm][helmsemver].
 
 Chart versions are ultimately defined by regular `Chart.yaml`, however it's enriched when change is
 located in a branch other than `master`. In `master` the exact version present in `Chart.yaml` is
@@ -149,7 +151,7 @@ In order to behave as a Helm-Charts repository, `chart-streams` exposes the foll
 
 ### `/index.yaml`
 
-Dinamically render `index.yaml` payload, representing actual Git repository data as Helm-Charts
+Dynamically render `index.yaml` payload, representing actual Git repository data as Helm-Charts
 repository index. Helm clients are frequently downloading this payload in order to check which charts
 and versions are available in the repository.
 

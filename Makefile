@@ -76,13 +76,7 @@ devcontainer-image:
 
 # execute devcontainer mounting local project directory
 devcontainer-run:
-	docker run \
-		--rm \
-		--interactive \
-		--tty \
-		--volume="${PWD}:/src/$(APP)" \
-		--workdir="/src/$(APP)" \
-		$(IMAGE_DEV_TAG) $(DEVCONTAINER_ARGS)
+	./hack/devcontainer-run.sh
 
 # start a bash shell in devcontainer
 devcontainer-exec:

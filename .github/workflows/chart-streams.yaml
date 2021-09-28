@@ -30,6 +30,6 @@ jobs:
           push: true
           file: Dockerfile.dev
           tags: ${{ env.IMAGE_DEV_TAG }}
-      - run: make devcontainer-run CODECOV_TOKEN="$CODECOV_TOKEN" IMAGE_DEV_TAG="$IMAGE_DEV_TAG" DEVCONTAINER_ARGS='make CODECOV_TOKEN=$CODECOV_TOKEN vendor test codecov'
+      - run: make devcontainer-run CODECOV_TOKEN="$CODECOV_TOKEN" IMAGE_DEV_TAG="$IMAGE_DEV_TAG" DEVCONTAINER_ARGS="make CODECOV_TOKEN=\"$CODECOV_TOKEN\" vendor test codecov"
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}

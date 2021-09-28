@@ -16,7 +16,7 @@ jobs:
         with:
           path: /usr/local/lib/libgit2.so.*
           key: ${{ runner.os }}-libgit2-1.2.0
-      
+
       - uses: actions/checkout@v2
       - uses: actions/setup-go@v2
         with:
@@ -25,9 +25,11 @@ jobs:
       - name: "Install libgit2 from sources"
         run: ./hack/ubuntu/libgit2.sh
         if: steps.cache-libgit2.outputs.cache-hit != 'true'
-      
+
+      - uses: golangci/golangci-lint-action@v2
+
       - run: make test
-      
+
       - uses: codecov/codecov-action@v2
         with:
           verbose: true

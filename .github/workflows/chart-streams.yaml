@@ -26,6 +26,8 @@ jobs:
         run: ./hack/ubuntu/libgit2.sh
         if: steps.cache-libgit2.outputs.cache-hit != 'true'
       
-      - run: make CODECOV_TOKEN="$CODECOV_TOKEN" test codecov
-        env:
-          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+      - run: make test
+      
+      - uses: codecov/codecov-action@v2
+        with:
+          verbose: true

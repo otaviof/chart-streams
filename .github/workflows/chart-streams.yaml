@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-18.04
     steps:
       - uses: actions/cache@v2
-        id: cache-libgit2
+        id: cache-libgit2-1_2_0
         with:
           path: /usr/local/lib/libgit2.so.*
           key: ${{ runner.os }}-libgit2-1.2.0
@@ -24,7 +24,7 @@ jobs:
 
       - name: "Install libgit2 from sources"
         run: sudo ./hack/ubuntu/libgit2.sh
-        if: steps.cache-libgit2.outputs.cache-hit != 'true'
+        if: steps.cache-libgit2-1_2_0.outputs.cache-hit != 'true'
       
       - run: make test
       

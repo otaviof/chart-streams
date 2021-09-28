@@ -28,7 +28,7 @@ echo "# Downloading libgit2 source-code..."
 curl --silent --location --remote-name https://${LIBGIT_HOST}/${LIBGIT_PATH}/${LIBGIT_TARBALL}
 
 echo "# Extracting tarball..."
-tar xvpf ${LIBGIT_TARBALL}
+tar xpf ${LIBGIT_TARBALL}
 cd ${LIBGIT_DIR}
 
 echo "# Building and installing libgit2!"
@@ -37,7 +37,7 @@ sudo cmake .. -DCMAKE_INSTALL_PREFIX="${LIBGIT_PREFIX}"
 sudo cmake --build . --target install
 
 echo "# Remmoving temporary director '${TMPDIR}'"
-cd /tmp && rm -rf "${TMPDIR}"
+cd /tmp && sudo rm -rf "${TMPDIR}"
 
 echo "# Installed:"
 ls -l "${LIBGIT_PREFIX}/lib/libgit2.so.${LIBGIT_VERSION}"

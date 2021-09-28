@@ -18,7 +18,7 @@ TMPDIR="$(mktemp -d)"
 cd ${TMPDIR}
 
 echo "# Installing dependencies..."
-apt install --yes --quiet \
+sudo apt install --yes --quiet \
     curl \
     cmake \
     libssl-dev \

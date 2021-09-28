@@ -5,21 +5,11 @@ on:
     branches:
       - master
 
-env:
-  REGISTRY: localhost:5000
-  IMAGE_NAME: ${{ github.repository }}
-  IMAGE_DEV_TAG: localhost:5000/${{ github.repository }}:${{ github.sha }}
-
 jobs:
   build-and-test:
     environment:
       name: build
     runs-on: ubuntu-18.04
-    services:
-      registry:
-        image: registry:2
-        ports:
-          - 5000:5000
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-go@v2

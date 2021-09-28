@@ -15,7 +15,7 @@ jobs:
         id: cache-libgit2
         with:
           path: /opt/libgit2
-          key: ${{ runner.os }}-${{ hashFiles('**/hack/ubuntu/libgit2.sh') }}
+          key: ${{ runner.os }}-${{ hashFiles('hack/ubuntu/libgit2.sh') }}
 
       - uses: actions/checkout@v2
       - uses: actions/setup-go@v2
@@ -30,6 +30,7 @@ jobs:
 
       - run: make test
         env:
+          PKG_CONFIG_PATH: /opt/libgit2/lib/pkgconfig
           LD_LIBRARY_PATH: /opt/libgit2/lib
 
       - uses: codecov/codecov-action@v2

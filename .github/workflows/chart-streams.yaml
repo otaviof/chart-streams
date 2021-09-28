@@ -11,12 +11,21 @@ jobs:
       name: build
     runs-on: ubuntu-18.04
     steps:
+      - uses: actions/cache@v2
+        id: cache-libgit2
+        with:
+          path: "/usr/local/lib"
+          key: ${{ runner.os }}-libgit2
+      
       - uses: actions/checkout@v2
       - uses: actions/setup-go@v2
         with:
           go-version: '1.16.8'
-      - run: ./hack/ubuntu/libgit2.sh
-        name: "Install libgit2 from sources"
+
+      - name: "Install libgit2 from sources"
+        run: ./hack/ubuntu/libgit2.sh
+        if: steps.cache-libgit2.outputs.cache-hit != 'true'
+      
       - run: make CODECOV_TOKEN="$CODECOV_TOKEN" test codecov
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}

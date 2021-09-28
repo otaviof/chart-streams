@@ -23,8 +23,9 @@ TEST_FLAGS ?= -failfast -timeout=$(TEST_TIMEOUT)
 UNIT_TEST_TARGET ?= ./cmd/... ./pkg/...
 E2E_TEST_TARGET ?= ./test/e2e/...
 
-CODECOV_TOKEN ?=
 COVERAGE_DIR ?= $(OUTPUT_DIR)/coverage
+
+LD_LIBRARY_PATH ?= /usr/local/lib
 
 # all variables are exported to environment
 .EXPORT_ALL_VARIABLES:
@@ -119,10 +120,6 @@ test-e2e: prepare
 		$(TEST_FLAGS) \
 		-coverprofile=$(COVERAGE_DIR)/coverage-e2e.txt \
 		$(E2E_TEST_TARGET)
-
-# codecov.io test coverage report
-codecov:
-	./hack/codecov.sh
 
 .PHONY: lint
 lint:

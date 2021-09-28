@@ -1,6 +1,9 @@
 name: chart-streams
-on: [push]
-
+on:
+  push:
+  pull_request:
+    branches:
+      - master
 
 env:
   REGISTRY: ghcr.io

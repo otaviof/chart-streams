@@ -33,8 +33,8 @@ cd ${LIBGIT_DIR}
 
 echo "# Building and installing libgit2!"
 mkdir build && cd build
-cmake .. -DCMAKE_INSTALL_PREFIX="${LIBGIT_PREFIX}"
-cmake --build . --target install
+sudo cmake .. -DCMAKE_INSTALL_PREFIX="${LIBGIT_PREFIX}"
+sudo cmake --build . --target install
 
 echo "# Remmoving temporary director '${TMPDIR}'"
 cd /tmp && rm -rf "${TMPDIR}"

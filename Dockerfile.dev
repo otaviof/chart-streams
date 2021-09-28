@@ -1,11 +1,7 @@
-FROM registry.fedoraproject.org/fedora:latest
-
+FROM golang:1.16.8
 COPY hack /src/hack
 COPY Makefile /src
 WORKDIR  /src
-
-RUN yum install --assumeyes make && \
-    make devcontainer-deps && \
-    rm -rf /src
-
+RUN apt update
+RUN /src/hack/ubuntu/libgit2.sh && rm -fr /src
 RUN mkdir -p -m 0777 /build

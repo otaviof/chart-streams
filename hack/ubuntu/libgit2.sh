@@ -18,7 +18,7 @@ TMPDIR="$(mktemp -d)"
 cd ${TMPDIR}
 
 echo "# Installing dependencies..."
-sudo apt install --yes --quiet \
+apt install --yes --quiet \
     curl \
     cmake \
     libssl-dev \
@@ -33,11 +33,11 @@ cd ${LIBGIT_DIR}
 
 echo "# Building and installing libgit2!"
 mkdir build && cd build
-sudo cmake .. -DCMAKE_INSTALL_PREFIX="${LIBGIT_PREFIX}"
-sudo cmake --build . --target install
+cmake .. -DCMAKE_INSTALL_PREFIX="${LIBGIT_PREFIX}"
+cmake --build . --target install
 
 echo "# Remmoving temporary director '${TMPDIR}'"
-cd /tmp && sudo rm -rf "${TMPDIR}"
+cd /tmp && rm -rf "${TMPDIR}"
 
 echo "# Installed:"
 ls -l "${LIBGIT_PREFIX}/lib/libgit2.so.${LIBGIT_VERSION}"

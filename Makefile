@@ -25,6 +25,7 @@ E2E_TEST_TARGET ?= ./test/e2e/...
 
 COVERAGE_DIR ?= $(OUTPUT_DIR)/coverage
 
+LIBGIT_VERSION ?=
 LD_LIBRARY_PATH ?= /usr/local/lib
 
 # all variables are exported to environment

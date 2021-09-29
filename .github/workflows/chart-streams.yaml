@@ -16,7 +16,6 @@ jobs:
         with:
           path: /opt/libgit2
           key: ${{ runner.os }}-${{ hashFiles('hack/ubuntu/libgit2.sh') }}
-
       - uses: actions/checkout@v2
       - uses: actions/setup-go@v2
         with:

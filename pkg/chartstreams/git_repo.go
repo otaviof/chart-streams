@@ -325,14 +325,8 @@ func NewGitRepo(cfg *Config, workdingDir string) (*GitRepo, error) {
 			return nil, fmt.Errorf("cloning repository '%s' on '%s': %w", cfg.RepoURL, workdingDir, err)
 		}
 
-		defaultRemote := "origin"
-		r, err := repo.Remotes.Lookup(defaultRemote)
-		if err != nil {
-			return nil, fmt.Errorf("looking up remote '%s': %w", defaultRemote, err)
-		}
-
-		if r.Url() != cfg.RepoURL {
-			return nil, fmt.Errorf("expected repository url '%s', got '%s'", cfg.RepoURL, r.Url())
+		if err := assertRemoteUrl(repo, "origin", cfg.RepoURL); err != nil {
+			log.Errorf("asserting remote '%s' url: %s", cfg.RepoURL, err)
 		}
 
 		log.Infof("Repository found in '%s' opened successfully", workdingDir)
@@ -366,4 +360,15 @@ func NewGitRepo(cfg *Config, workdingDir string) (*GitRepo, error) {
 		head:       head.Target(),
 		branches:   branches,
 	}, nil
+}
+
+func assertRemoteUrl(repo *git.Repository, name string, expected string) error {
+	r, err := repo.Remotes.Lookup(name)
+	if err != nil {
+		return fmt.Errorf("looking up remote '%s': %w", name, err)
+	}
+	if r.Url() != expected {
+		return fmt.Errorf("expected repository url '%s', got '%s'", expected, r.Url())
+	}
+	return nil
 }

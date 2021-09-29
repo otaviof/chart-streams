@@ -26,6 +26,7 @@ func init() {
 	flags.String("listen-addr", ":8080", "Address to listen")
 	flags.String("working-dir", "/var/lib/chart-streams", "Git repository working directory")
 	flags.String("log-level", "info", "Log verbosity level (error, warn, info, debug, trace)")
+	flags.Bool("force-clone", false, "destroys working-dir and clones the repository")
 
 	rootCmd.AddCommand(serveCmd)
 	bindViperFlags(flags)
@@ -40,6 +41,7 @@ func runServeCmd(cmd *cobra.Command, args []string) {
 		CloneDepth:  viper.GetInt("clone-depth"),
 		ListenAddr:  viper.GetString("listen-addr"),
 		RelativeDir: viper.GetString("relative-dir"),
+		ForceClone:  viper.GetBool("force-clone"),
 	}
 
 	log.Printf("Starting server with config: '%#v'", cfg)

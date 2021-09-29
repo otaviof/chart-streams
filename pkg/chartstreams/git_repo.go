@@ -2,6 +2,7 @@ package chartstreams
 
 import (
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -305,24 +306,50 @@ func NewGitRepo(cfg *Config, workdingDir string) (*GitRepo, error) {
 	if cfg.RelativeDir != "" {
 		opts.CheckoutOpts.Paths = []string{cfg.RelativeDir}
 	}
-	log.Infof("Cloning repository '%s' on '%s'", cfg.RepoURL, workdingDir)
-	r, err := git.Clone(cfg.RepoURL, workdingDir, opts)
-	if err != nil {
-		return nil, fmt.Errorf("cloning repository %q on %q: %w", cfg.RepoURL, workdingDir, err)
+
+	if cfg.ForceClone {
+		log.Infof("Removing working-dir '%s' per user request", workdingDir)
+		if err := os.RemoveAll(workdingDir); err != nil {
+			return nil, fmt.Errorf("removing working-dir '%s': %w", workdingDir, err)
+		}
 	}
 
-	head, err := r.Head()
+	log.Infof("Cloning repository '%s' on '%s'", cfg.RepoURL, workdingDir)
+	repo, err := git.Clone(cfg.RepoURL, workdingDir, opts)
+	if err != nil {
+		log.Infof("Error cloning repository, will try to recover: %s", err)
+
+		// naively assume the directory contains a git repository and is the
+		// right repository
+		if repo, err = git.OpenRepository(workdingDir); err != nil {
+			return nil, fmt.Errorf("cloning repository '%s' on '%s': %w", cfg.RepoURL, workdingDir, err)
+		}
+
+		defaultRemote := "origin"
+		r, err := repo.Remotes.Lookup(defaultRemote)
+		if err != nil {
+			return nil, fmt.Errorf("looking up remote '%s': %w", defaultRemote, err)
+		}
+
+		if r.Url() != cfg.RepoURL {
+			return nil, fmt.Errorf("expected repository url '%s', got '%s'", cfg.RepoURL, r.Url())
+		}
+
+		log.Infof("Repository found in '%s' opened successfully", workdingDir)
+	}
+
+	head, err := repo.Head()
 	if err != nil {
 		return nil, fmt.Errorf("obtaining repository's head: %w", err)
 	}
 	defer head.Free()
 
-	err = r.CheckoutHead(&git.CheckoutOptions{Strategy: git.CheckoutForce | git.CheckoutRecreateMissing})
+	err = repo.CheckoutHead(&git.CheckoutOptions{Strategy: git.CheckoutForce | git.CheckoutRecreateMissing})
 	if err != nil {
 		return nil, err
 	}
 
-	branches, err := extractBranches(r)
+	branches, err := extractBranches(repo)
 	if err != nil {
 		return nil, fmt.Errorf("extracting branches: %w", err)
 	}
@@ -335,7 +362,7 @@ func NewGitRepo(cfg *Config, workdingDir string) (*GitRepo, error) {
 	return &GitRepo{
 		cfg:        cfg,
 		WorkingDir: workdingDir,
-		r:          r,
+		r:          repo,
 		head:       head.Target(),
 		branches:   branches,
 	}, nil

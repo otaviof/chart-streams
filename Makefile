@@ -125,3 +125,7 @@ test-e2e: prepare
 .PHONY: lint
 lint:
 	@golangci-lint run
+
+.PHONY: libgit2
+libgit2:
+	./hack/ubuntu/libgit2.sh

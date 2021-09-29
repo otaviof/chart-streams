@@ -23,7 +23,7 @@ jobs:
           go-version: '1.16.8'
 
       - name: "Install libgit2 from sources"
-        run: sudo -E ./hack/ubuntu/libgit2.sh
+        run: sudo -E make libgit2
         env:
           LIBGIT_PREFIX: /opt/libgit2
         if: steps.cache-libgit2.outputs.cache-hit != 'true'

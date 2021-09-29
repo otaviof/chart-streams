@@ -92,7 +92,10 @@ func (g *GitRepo) CheckoutCommit(branch string, c *git.Commit) error {
 
 	head := fmt.Sprintf("refs/heads/%s", branch)
 	log.Debugf("Setting head as '%s' for branch '%s'", head, branch)
-	g.r.SetHead(head)
+	err = g.r.SetHead(head)
+	if err != nil {
+		return err
+	}
 	return g.r.CheckoutHead(checkoutOpts)
 }
 
@@ -120,7 +123,10 @@ func (g *GitRepo) checkoutBranch(branch string) error {
 
 	reference := fmt.Sprintf("refs/heads/%s", branch)
 	log.Debugf("Setting reference '%s' on branch '%s'", reference, branch)
-	g.r.SetHead(reference)
+	err = g.r.SetHead(reference)
+	if err != nil {
+		return err
+	}
 	_, err = g.r.References.Create(reference, c.Id(), true, branch)
 	return err
 }
@@ -179,7 +185,10 @@ func (g *GitRepo) ModifiedFiles(c *git.Commit, tree *git.Tree) ([]string, error)
 				"creating diff between parent's commit-id %q and %q: %w",
 				parentID.String(), c.Id().String(), err)
 		}
-		defer diff.Free()
+		defer func() {
+			// there isn't anything useful to do.
+			_ = diff.Free()
+		}()
 
 		_ = diff.ForEach(func(f git.DiffDelta, p float64) (git.DiffForEachHunkCallback, error) {
 			modified = append(modified, f.OldFile.Path)

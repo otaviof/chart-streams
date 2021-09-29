@@ -28,7 +28,17 @@ func (f *FakeChartProvider) GetIndexFile() *helmrepo.IndexFile {
 		Name:       "chart",
 		Version:    "0.0.1",
 	}
-	indexFile.Add(metadata, "chart.tgz", baseURL, "digest")
+
+	// NOTE(isutton): I was inclined to not ignore the error and
+	// replace with the code below, but it didn't feel important
+	// enough to bother for now.
+	_ = indexFile.MustAdd(metadata, "chart.tgz", baseURL, "digest")
+
+	// err := indexFile.MustAdd(metadata, "chart.tgz", baseURL, "digest")
+	// if err != nil {
+	// 	panic(err)
+	// }
+
 	indexFile.SortEntries()
 	return indexFile
 }

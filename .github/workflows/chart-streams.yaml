@@ -11,12 +11,12 @@ jobs:
       name: build
     runs-on: ubuntu-18.04
     steps:
+      - uses: actions/checkout@v2
       - uses: actions/cache@v2
         id: cache-libgit2
         with:
           path: /opt/libgit2
           key: ${{ runner.os }}-${{ hashFiles('hack/ubuntu/libgit2.sh') }}
-      - uses: actions/checkout@v2
       - uses: actions/setup-go@v2
         with:
           go-version: '1.16.8'

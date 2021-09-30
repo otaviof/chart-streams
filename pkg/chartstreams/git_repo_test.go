@@ -36,6 +36,10 @@ func TestGitRepo_NewGitRepoUpstream(t *testing.T) {
 	r, err = NewGitRepo(cfg, tempDir)
 	require.NoError(t, err, "re-opening working-dir after successful clone")
 
+	cfg.ForceClone = true
+	_, err = NewGitRepo(cfg, tempDir)
+	require.NoError(t, err, "forcing clone into working-dir")
+
 	_ = os.RemoveAll(tempDir)
 }
 
@@ -59,6 +63,10 @@ func TestGitRepo_NewGitRepoLocal(t *testing.T) {
 
 	_, err = NewGitRepo(cfg, tempDir)
 	require.NoError(t, err, "re-opening working-dir after successful clone")
+
+	cfg.ForceClone = true
+	_, err = NewGitRepo(cfg, tempDir)
+	require.NoError(t, err, "forcing clone into working-dir")
 
 	_ = os.RemoveAll(tempDir)
 }

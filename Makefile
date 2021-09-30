@@ -17,7 +17,7 @@ COMMON_FLAGS ?= -v -mod=vendor
 CHARTS_REPO_ARCHIVE ?= test/charts-repo.tar.gz
 CHARTS_REPO_DIR ?= $(OUTPUT_DIR)/charts-repo
 
-TEST_TIMEOUT ?= 3m
+TEST_TIMEOUT ?= 10m
 TEST_FLAGS ?= -failfast -timeout=$(TEST_TIMEOUT)
 
 UNIT_TEST_TARGET ?= ./cmd/... ./pkg/...

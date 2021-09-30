@@ -33,6 +33,9 @@ func TestGitRepo_NewGitRepoUpstream(t *testing.T) {
 		assert.NoError(t, err)
 	})
 
+	r, err = NewGitRepo(cfg, tempDir)
+	require.NoError(t, err, "re-opening working-dir after successful clone")
+
 	_ = os.RemoveAll(tempDir)
 }
 
@@ -53,6 +56,9 @@ func TestGitRepo_NewGitRepoLocal(t *testing.T) {
 		return nil
 	})
 	require.NoError(t, err)
+
+	_, err = NewGitRepo(cfg, tempDir)
+	require.NoError(t, err, "re-opening working-dir after successful clone")
 
 	_ = os.RemoveAll(tempDir)
 }

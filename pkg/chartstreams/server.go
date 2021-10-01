@@ -1,6 +1,7 @@
 package chartstreams
 
 import (
+	"encoding/json"
 	"net/http"
 	"strings"
 	"time"
@@ -9,6 +10,9 @@ import (
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
 	"sigs.k8s.io/yaml"
+
+	"github.com/google/go-github/v39/github"
+	githubhook "gopkg.in/rjz/githubhook.v0"
 )
 
 // Server represents the chartstreams server offering its API. The server puts together the routes,
@@ -56,6 +60,66 @@ func (s *Server) DirectLinkHandler(c *gin.Context) {
 	c.Data(http.StatusOK, "application/gzip", p.Bytes())
 }
 
+func (s *Server) readEvent(c *gin.Context) (*github.PullRequestEvent, error) {
+	evt := github.PullRequestEvent{}
+	if s.cfg.GitHubWebhookSecret != "" {
+		secret := []byte(s.cfg.GitHubWebhookSecret)
+		hook, err := githubhook.Parse(secret, c.Request)
+		if err != nil {
+			log.Errorf("parsing GitHub webhook: %s", err)
+			return nil, GitHubWebhookParseErr{err}
+		}
+		payload := hook.Payload
+		if err := json.Unmarshal(payload, &evt); err != nil {
+			log.Errorf("parsing JSON payload: %s", err)
+			return nil, GitHubWebhookPayloadDecodeErr{err}
+		}
+	} else if err := c.BindJSON(&evt); err != nil {
+		log.Errorf("parsing JSON payload: %s", err)
+		return nil, GitHubWebhookPayloadDecodeErr{err}
+	}
+	return &evt, nil
+}
+
+type GitHubWebhookPayloadDecodeErr struct {
+	err error
+}
+
+func (e GitHubWebhookPayloadDecodeErr) Error() string {
+	return e.err.Error()
+}
+
+type GitHubWebhookParseErr struct {
+	err error
+}
+
+func (e GitHubWebhookParseErr) Error() string {
+	return e.err.Error()
+}
+
+func (s *Server) GitHubPullTriggerHandler(c *gin.Context) {
+	// The following block describes the behavior whether a GitHub's webhook
+	// secret has been informed or not.
+
+	evt, err := s.readEvent(c)
+	if err != nil {
+		switch err.(type) {
+		case GitHubWebhookParseErr:
+			log.Errorf("parsing GitHub webhook: %s", err)
+			c.Status(http.StatusInternalServerError)
+			return
+		case GitHubWebhookPayloadDecodeErr:
+			log.Errorf("decoding event payload: %s", err)
+			c.Status(http.StatusBadRequest)
+			return
+		}
+	}
+
+	// do something with `evt`
+	log.Debugf("GitHub event handled: %v", evt)
+	c.Status(http.StatusOK)
+}
+
 // SetupRoutes register routes
 func (s *Server) SetupRoutes() *gin.Engine {
 	g := gin.New()
@@ -65,6 +129,7 @@ func (s *Server) SetupRoutes() *gin.Engine {
 	g.GET("/", s.RootHandler)
 	g.GET("/index.yaml", s.IndexHandler)
 	g.GET("/chart/:name/*version", s.DirectLinkHandler)
+	g.POST("/api/webhooks/github", s.GitHubPullTriggerHandler)
 
 	return g
 }

@@ -294,6 +294,23 @@ func extractBranches(r *git.Repository) ([]string, error) {
 	return branchRef, err
 }
 
+func (g *GitRepo) FetchBranch(branchName string) error {
+	remoteName := "origin"
+
+	log.Infof("Fetching branch '%s' from remote '%s'...", branchName, remoteName)
+
+	remote, err := g.r.Remotes.Lookup(remoteName)
+	if err != nil {
+		return fmt.Errorf("looking up remote '%s': %w", remoteName, err)
+	}
+
+	if err := remote.Fetch([]string{}, nil, ""); err != nil {
+		return fmt.Errorf("fetching updates from '%s': %w", remoteName, err)
+	}
+
+	return nil
+}
+
 // NewGitRepo instantiate git repository by cloning, and extract repository information.
 func NewGitRepo(cfg *Config, workdingDir string) (*GitRepo, error) {
 	log.Infof("Working directory at '%s'", workdingDir)

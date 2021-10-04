@@ -60,8 +60,8 @@ func (s *Server) DirectLinkHandler(c *gin.Context) {
 	c.Data(http.StatusOK, "application/gzip", p.Bytes())
 }
 
-func (s *Server) readEvent(c *gin.Context) (*github.PullRequestEvent, error) {
-	evt := github.PullRequestEvent{}
+func (s *Server) readEvent(c *gin.Context) (*github.PushEvent, error) {
+	evt := github.PushEvent{}
 	if s.cfg.GitHubWebhookSecret != "" {
 		secret := []byte(s.cfg.GitHubWebhookSecret)
 		hook, err := githubhook.Parse(secret, c.Request)
@@ -119,9 +119,20 @@ func (s *Server) GitHubPullTriggerHandler(c *gin.Context) {
 		}
 	}
 
-	// do something with `evt`
-	log.Debugf("GitHub event handled: %v", evt)
-	c.String(http.StatusOK, "")
+	log.Debugf("handling event: %v", evt)
+
+	switch p := s.chartProvider.(type) {
+	case *GitChartProvider:
+		if err := p.UpdateBranch(*evt.Ref); err != nil {
+			log.Errorf("pulling branch '%s': %s", *evt.Ref, err)
+			c.String(http.StatusInternalServerError, "")
+			return
+		}
+	default:
+		log.Debugf("GitHub event handled: %v", evt)
+		c.String(http.StatusOK, "")
+		return
+	}
 }
 
 // SetupRoutes register routes

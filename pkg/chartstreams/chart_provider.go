@@ -27,6 +27,11 @@ type GitChartProvider struct {
 
 var _ ChartProvider = &GitChartProvider{}
 
+// UpdateBranch fetches the latest changes from the remote.
+func (g *GitChartProvider) UpdateBranch(name string) error {
+	return g.gitRepo.FetchBranch(name)
+}
+
 // GetIndexFile returns the helm repository index-file instance.
 func (g *GitChartProvider) GetIndexFile() *helmrepo.IndexFile {
 	return g.indexFile

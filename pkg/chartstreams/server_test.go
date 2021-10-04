@@ -82,15 +82,25 @@ func TestServer_GitHubPullTriggerHandler(t *testing.T) {
 
 		w := httptest.NewRecorder()
 
-		evt := &github.PullRequestEvent{}
-		evtBytes, err := json.Marshal(evt)
-		assert.NoError(t, err)
+		t.Run("valid event should return OK", func(t *testing.T) {
+			evt := &github.PullRequestEvent{}
+			evtBytes, _ := json.Marshal(evt)
 
-		evtReader := bytes.NewReader(evtBytes)
-		req, err := http.NewRequest("POST", "/api/webhooks/github", evtReader)
-		assert.NoError(t, err)
+			evtReader := bytes.NewReader(evtBytes)
+			req, err := http.NewRequest("POST", "/api/webhooks/github", evtReader)
+			assert.NoError(t, err)
 
-		g.ServeHTTP(w, req)
-		assert.Equal(t, http.StatusOK, w.Code)
+			g.ServeHTTP(w, req)
+			assert.Equal(t, http.StatusOK, w.Code)
+		})
+
+		t.Run("invalid JSON payload should return BadRequest", func(t *testing.T) {
+			req, err := http.NewRequest("POST", "/api/webhooks/github",
+				bytes.NewReader([]byte("{invalid JSON payload")))
+			assert.NoError(t, err)
+
+			g.ServeHTTP(w, req)
+			assert.Equal(t, http.StatusBadRequest, w.Code)
+		})
 	})
 }

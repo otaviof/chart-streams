@@ -67,16 +67,16 @@ func (s *Server) readEvent(c *gin.Context) (*github.PullRequestEvent, error) {
 		hook, err := githubhook.Parse(secret, c.Request)
 		if err != nil {
 			log.Errorf("parsing GitHub webhook: %s", err)
-			return nil, GitHubWebhookParseErr{err}
+			return nil, &GitHubWebhookParseErr{err}
 		}
 		payload := hook.Payload
 		if err := json.Unmarshal(payload, &evt); err != nil {
-			log.Errorf("parsing JSON payload: %s", err)
-			return nil, GitHubWebhookPayloadDecodeErr{err}
+			log.Errorf("parsing signed JSON payload: %s", err)
+			return nil, &GitHubWebhookPayloadDecodeErr{err}
 		}
 	} else if err := c.BindJSON(&evt); err != nil {
 		log.Errorf("parsing JSON payload: %s", err)
-		return nil, GitHubWebhookPayloadDecodeErr{err}
+		return nil, &GitHubWebhookPayloadDecodeErr{err}
 	}
 	return &evt, nil
 }
@@ -85,7 +85,7 @@ type GitHubWebhookPayloadDecodeErr struct {
 	err error
 }
 
-func (e GitHubWebhookPayloadDecodeErr) Error() string {
+func (e *GitHubWebhookPayloadDecodeErr) Error() string {
 	return e.err.Error()
 }
 
@@ -93,7 +93,7 @@ type GitHubWebhookParseErr struct {
 	err error
 }
 
-func (e GitHubWebhookParseErr) Error() string {
+func (e *GitHubWebhookParseErr) Error() string {
 	return e.err.Error()
 }
 
@@ -104,20 +104,24 @@ func (s *Server) GitHubPullTriggerHandler(c *gin.Context) {
 	evt, err := s.readEvent(c)
 	if err != nil {
 		switch err.(type) {
-		case GitHubWebhookParseErr:
+		case *GitHubWebhookParseErr:
 			log.Errorf("parsing GitHub webhook: %s", err)
-			c.Status(http.StatusInternalServerError)
+			c.String(http.StatusInternalServerError, "")
 			return
-		case GitHubWebhookPayloadDecodeErr:
+		case *GitHubWebhookPayloadDecodeErr:
 			log.Errorf("decoding event payload: %s", err)
-			c.Status(http.StatusBadRequest)
+			c.String(http.StatusBadRequest, "")
+			return
+		default:
+			log.Errorf("unknown error: %s", err)
+			c.String(http.StatusInternalServerError, "")
 			return
 		}
 	}
 
 	// do something with `evt`
 	log.Debugf("GitHub event handled: %v", evt)
-	c.Status(http.StatusOK)
+	c.String(http.StatusOK, "")
 }
 
 // SetupRoutes register routes

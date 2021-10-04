@@ -80,9 +80,9 @@ func TestServer_GitHubPullTriggerHandler(t *testing.T) {
 		s := NewServer(cfg, p)
 		g := s.SetupRoutes()
 
-		w := httptest.NewRecorder()
-
 		t.Run("valid event should return OK", func(t *testing.T) {
+			w := httptest.NewRecorder()
+
 			evt := &github.PullRequestEvent{}
 			evtBytes, _ := json.Marshal(evt)
 
@@ -95,6 +95,8 @@ func TestServer_GitHubPullTriggerHandler(t *testing.T) {
 		})
 
 		t.Run("invalid JSON payload should return BadRequest", func(t *testing.T) {
+			w := httptest.NewRecorder()
+
 			req, err := http.NewRequest("POST", "/api/webhooks/github",
 				bytes.NewReader([]byte("{invalid JSON payload")))
 			assert.NoError(t, err)

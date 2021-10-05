@@ -62,7 +62,9 @@ func TestServer_GitHubPullTriggerHandler(t *testing.T) {
 
 		w := httptest.NewRecorder()
 
-		evt := &github.PullRequestEvent{}
+		evt := &github.PushEvent{
+			Ref: github.String("master"),
+		}
 		evtBytes, err := json.Marshal(evt)
 		assert.NoError(t, err)
 
@@ -83,7 +85,9 @@ func TestServer_GitHubPullTriggerHandler(t *testing.T) {
 		t.Run("valid event should return OK", func(t *testing.T) {
 			w := httptest.NewRecorder()
 
-			evt := &github.PullRequestEvent{}
+			evt := &github.PushEvent{
+				Ref: github.String("master"),
+			}
 			evtBytes, _ := json.Marshal(evt)
 
 			evtReader := bytes.NewReader(evtBytes)

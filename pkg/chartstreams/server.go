@@ -2,6 +2,7 @@ package chartstreams
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -60,63 +61,38 @@ func (s *Server) DirectLinkHandler(c *gin.Context) {
 	c.Data(http.StatusOK, "application/gzip", p.Bytes())
 }
 
-func (s *Server) readEvent(c *gin.Context) (*github.PushEvent, error) {
-	evt := github.PushEvent{}
-	if s.cfg.GitHubWebhookSecret != "" {
-		secret := []byte(s.cfg.GitHubWebhookSecret)
-		hook, err := githubhook.Parse(secret, c.Request)
-		if err != nil {
-			log.Errorf("parsing GitHub webhook: %s", err)
-			return nil, &GitHubWebhookParseErr{err}
-		}
-		payload := hook.Payload
-		if err := json.Unmarshal(payload, &evt); err != nil {
-			log.Errorf("parsing signed JSON payload: %s", err)
-			return nil, &GitHubWebhookPayloadDecodeErr{err}
-		}
-	} else if err := c.BindJSON(&evt); err != nil {
-		log.Errorf("parsing JSON payload: %s", err)
-		return nil, &GitHubWebhookPayloadDecodeErr{err}
+func (s *Server) bindEncodedJSON(
+	c *gin.Context,
+	evt *github.PushEvent,
+	secret []byte,
+) error {
+	hook, err := githubhook.Parse(secret, c.Request)
+	if err != nil {
+		return fmt.Errorf("parsing GitHub webhook: %w", err)
 	}
-	return &evt, nil
-}
-
-type GitHubWebhookPayloadDecodeErr struct {
-	err error
-}
-
-func (e *GitHubWebhookPayloadDecodeErr) Error() string {
-	return e.err.Error()
-}
-
-type GitHubWebhookParseErr struct {
-	err error
-}
-
-func (e *GitHubWebhookParseErr) Error() string {
-	return e.err.Error()
+	if err := json.Unmarshal(hook.Payload, &evt); err != nil {
+		return fmt.Errorf("parsing signed JSON payload: %w", err)
+	}
+	return nil
 }
 
 func (s *Server) GitHubPullTriggerHandler(c *gin.Context) {
 	// The following block describes the behavior whether a GitHub's webhook
 	// secret has been informed or not.
 
-	evt, err := s.readEvent(c)
-	if err != nil {
-		switch err.(type) {
-		case *GitHubWebhookParseErr:
-			log.Errorf("parsing GitHub webhook: %s", err)
-			c.String(http.StatusInternalServerError, "")
-			return
-		case *GitHubWebhookPayloadDecodeErr:
-			log.Errorf("decoding event payload: %s", err)
-			c.String(http.StatusBadRequest, "")
-			return
-		default:
-			log.Errorf("unknown error: %s", err)
+	evt := github.PushEvent{}
+
+	if s.cfg.GitHubWebhookSecret != "" {
+		secret := []byte(s.cfg.GitHubWebhookSecret)
+		if err := s.bindEncodedJSON(c, &evt, secret); err != nil {
+			log.Errorf("binding encoded webhook payload: %s", err)
 			c.String(http.StatusInternalServerError, "")
 			return
 		}
+	} else if err := c.BindJSON(&evt); err != nil {
+		log.Errorf("binding plain webhook payload: %s", err)
+		c.String(http.StatusBadRequest, "")
+		return
 	}
 
 	log.Debugf("handling event: %v", evt)

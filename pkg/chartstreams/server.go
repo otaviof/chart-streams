@@ -97,6 +97,12 @@ func (s *Server) GitHubPullTriggerHandler(c *gin.Context) {
 
 	log.Debugf("handling event: %v", evt)
 
+	if evt.Ref == nil {
+		log.Debugf("Ref missing from event")
+		c.String(http.StatusBadRequest, "")
+		return
+	}
+
 	if err := s.chartProvider.UpdateBranch(*evt.Ref); err != nil {
 		log.Errorf("updating branch '%s': %s", *evt.Ref, err)
 		c.String(http.StatusInternalServerError, "")

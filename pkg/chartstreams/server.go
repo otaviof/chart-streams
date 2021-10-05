@@ -97,18 +97,14 @@ func (s *Server) GitHubPullTriggerHandler(c *gin.Context) {
 
 	log.Debugf("handling event: %v", evt)
 
-	switch p := s.chartProvider.(type) {
-	case *GitChartProvider:
-		if err := p.UpdateBranch(*evt.Ref); err != nil {
-			log.Errorf("pulling branch '%s': %s", *evt.Ref, err)
-			c.String(http.StatusInternalServerError, "")
-			return
-		}
-	default:
-		log.Debugf("GitHub event handled: %v", evt)
-		c.String(http.StatusOK, "")
+	if err := s.chartProvider.UpdateBranch(*evt.Ref); err != nil {
+		log.Errorf("updating branch '%s': %s", *evt.Ref, err)
+		c.String(http.StatusInternalServerError, "")
 		return
 	}
+
+	log.Debugf("GitHub event handled: %v", evt)
+	c.String(http.StatusOK, "")
 }
 
 // SetupRoutes register routes

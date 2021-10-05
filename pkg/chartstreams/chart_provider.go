@@ -10,6 +10,7 @@ type ChartProvider interface {
 	Initialize() error
 	GetChart(name, version string) (*Package, error)
 	GetIndexFile() *helmrepo.IndexFile
+	UpdateBranch(branch string) error
 }
 
 // versionCommitMap	mapping of chart version and git commits

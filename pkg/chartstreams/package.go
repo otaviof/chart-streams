@@ -90,6 +90,20 @@ func (p *Package) Build() error {
 	return bw.Flush()
 }
 
+// LoadFiles creates a Package using the given in-memory files.
+func LoadFiles(files []*loader.BufferedFile, t *time.Time) (*Package, error) {
+	chart, err := loader.LoadFiles(files)
+	if err != nil {
+		return nil, fmt.Errorf("loading chart from in-memory files: %w", err)
+	}
+	return &Package{
+		dir:   "in-memory",
+		t:     t,
+		chart: chart,
+		b:     bytes.NewBuffer([]byte{}),
+	}, nil
+}
+
 // NewPackage instantiate a package by inspecting directory and loading the chart.
 func NewPackage(dir string, t *time.Time) (*Package, error) {
 	chart, err := loader.LoadDir(dir)

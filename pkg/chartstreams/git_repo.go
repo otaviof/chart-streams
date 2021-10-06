@@ -8,6 +8,7 @@ import (
 
 	git "github.com/libgit2/git2go/v31"
 	log "github.com/sirupsen/logrus"
+	"helm.sh/helm/v3/pkg/chart/loader"
 )
 
 // CommitInfo holds together time and commit hash.
@@ -74,6 +75,49 @@ func (g *GitRepo) checkoutTree(oid *git.Oid) (*git.Tree, error) {
 		return nil, fmt.Errorf("checking out tree %q: %w", oid, err)
 	}
 	return tree, nil
+}
+
+// GetFilesFromCommit returns a list of files inside the path for a given
+// commit; this list of files is meant to be consumed by Helm's
+// `loader.LoadFiles` function.
+func (g *GitRepo) GetFilesFromCommit(
+	commit *git.Commit,
+	path string,
+) ([]*loader.BufferedFile, error) {
+	idx, err := g.r.Index()
+	if err != nil {
+		return nil, fmt.Errorf("obtaining repository index: %w", err)
+	}
+
+	// files contains the contents to be returned, ready to be used by
+	// `loader.LoadFiles`.
+	files := []*loader.BufferedFile{}
+
+	for i := uint(0); i < idx.EntryCount(); i++ {
+		e, err := idx.EntryByIndex(i)
+		if err != nil {
+			return nil, fmt.Errorf("looking up index entry for path '%s': %w", path, err)
+		}
+
+		if !strings.HasPrefix(e.Path, path) {
+			continue
+		}
+
+		blob, err := g.r.LookupBlob(e.Id)
+		if err != nil {
+			return nil, fmt.Errorf("looking up blob for '%s': %w", e.Id, err)
+		}
+
+		path = strings.TrimPrefix(e.Path, path+"/")
+
+		file := &loader.BufferedFile{
+			Name: path,
+			Data: blob.Contents(),
+		}
+		files = append(files, file)
+	}
+
+	return files, nil
 }
 
 // CheckoutCommit based in branch and commit id, execute tree checkout.

@@ -2,7 +2,10 @@ package chartstreams
 
 import (
 	"bytes"
+	"crypto/hmac"
+	"crypto/sha1"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -55,7 +58,8 @@ func TestServer(t *testing.T) {
 
 func TestServer_GitHubPullTriggerHandler(t *testing.T) {
 	t.Run("GitHubWebhookSecret specified", func(t *testing.T) {
-		cfg := &Config{ListenAddr: "127.0.0.1:8080", GitHubWebhookSecret: "<SECRET>"}
+		secret := []byte("0406d00c77334cdceafae")
+		cfg := &Config{ListenAddr: "127.0.0.1:8080", GitHubWebhookSecret: string(secret)}
 		p := NewFakeChartProvider(cfg)
 		s := NewServer(cfg, p)
 		g := s.SetupRoutes()
@@ -68,12 +72,21 @@ func TestServer_GitHubPullTriggerHandler(t *testing.T) {
 		evtBytes, err := json.Marshal(evt)
 		assert.NoError(t, err)
 
-		evtReader := bytes.NewReader(evtBytes)
-		req, err := http.NewRequest("POST", "/api/webhooks/github", evtReader)
+		signature := signBody(secret, evtBytes)
+		bodyReader := bytes.NewReader(evtBytes)
+		req, err := http.NewRequest("POST", "/api/webhooks/github", bodyReader)
 		assert.NoError(t, err)
 
+		// See https://github.com/isutton/chart-streams/blob/7ef719f38aef56e7fe9f3e72960ccea5d75c4f07/vendor/gopkg.in/rjz/githubhook.v0/githubhook.go#L70-L90
+		//
+		// TODO(isutton): sha1 should be substituted by sha256.
+		//				  see https://docs.github.com/en/developers/webhooks-and-events/webhooks/securing-your-webhooks
+		req.Header.Add("x-hub-signature", fmt.Sprintf("sha1=%x", string(signature)))
+		req.Header.Add("x-github-event", "push")
+		req.Header.Add("x-github-delivery", "<DELIVERY_ID>")
+
 		g.ServeHTTP(w, req)
-		assert.Equal(t, http.StatusInternalServerError, w.Code)
+		assert.Equal(t, http.StatusOK, w.Code)
 	})
 
 	t.Run("GitHubWebhookSecret not specified", func(t *testing.T) {
@@ -109,4 +122,15 @@ func TestServer_GitHubPullTriggerHandler(t *testing.T) {
 			assert.Equal(t, http.StatusBadRequest, w.Code)
 		})
 	})
+}
+
+// signBody returns the body signature with the body and the given secret.
+//
+// This implementation has been copied from githubhook.
+//
+// see https://github.com/isutton/chart-streams/blob/7ef719f38aef56e7fe9f3e72960ccea5d75c4f07/vendor/gopkg.in/rjz/githubhook.v0/githubhook.go#L43-L47
+func signBody(secret, body []byte) []byte {
+	computed := hmac.New(sha1.New, secret)
+	computed.Write(body)
+	return []byte(computed.Sum(nil))
 }

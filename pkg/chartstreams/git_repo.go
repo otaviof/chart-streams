@@ -29,16 +29,13 @@ type GitRepo struct {
 }
 
 // CommitIterFn function to be executed against each commit.
-type CommitIterFn func(string, *git.Commit, *git.Tree, bool) error
+type CommitIterFn func(string, *git.Commit, bool) error
 
 // branchIterFn function to be executed against each branch.
-type branchIterFn func(string, *git.Odb) error
+type branchIterFn func(string, *git.Commit) error
 
 // originPrefix common origin string prefix.
 const originPrefix = "origin/"
-
-// checkoutOpts common checkout options, to force and keep a clean tree.
-var checkoutOpts = &git.CheckoutOptions{Strategy: git.CheckoutForce | git.CheckoutRemoveUntracked}
 
 // sortBranches will sort local list of branches, skipping "master".
 func (g *GitRepo) sortBranches() []string {
@@ -52,8 +49,8 @@ func (g *GitRepo) sortBranches() []string {
 	return sorted
 }
 
-// lookupBranch search for a remote branch, and if not found, a local branch instead.
-func (g *GitRepo) lookupBranch(branch string) (*git.Branch, error) {
+// LookupBranch search for a remote branch, and if not found, a local branch instead.
+func (g *GitRepo) LookupBranch(branch string) (*git.Branch, error) {
 	remoteBranch := fmt.Sprintf("%s%s", originPrefix, branch)
 	b, err := g.r.LookupBranch(remoteBranch, git.BranchRemote)
 	if err == nil && b != nil {
@@ -63,18 +60,6 @@ func (g *GitRepo) lookupBranch(branch string) (*git.Branch, error) {
 
 	log.Infof("Searching for local branch '%s'...", branch)
 	return g.r.LookupBranch(branch, git.BranchLocal)
-}
-
-// checkoutTree execute tree look up and checkout.
-func (g *GitRepo) checkoutTree(oid *git.Oid) (*git.Tree, error) {
-	tree, err := g.r.LookupTree(oid)
-	if err != nil {
-		return nil, fmt.Errorf("looking up tree %q: %w", oid, err)
-	}
-	if err = g.r.CheckoutTree(tree, checkoutOpts); err != nil {
-		return nil, fmt.Errorf("checking out tree %q: %w", oid, err)
-	}
-	return tree, nil
 }
 
 // GetFilesFromCommit returns a list of files inside the path for a given
@@ -88,6 +73,7 @@ func (g *GitRepo) GetFilesFromCommit(
 	if err != nil {
 		return nil, fmt.Errorf("obtaining commit tree: %w", err)
 	}
+	defer tree.Free()
 
 	// files contains the contents to be returned, ready to be used by
 	// `loader.LoadFiles`.
@@ -128,79 +114,51 @@ func (g *GitRepo) GetFilesFromCommit(
 	return files, err
 }
 
-// CheckoutCommit based in branch and commit id, execute tree checkout.
-func (g *GitRepo) CheckoutCommit(branch string, c *git.Commit) error {
-	log.Infof("Checking out commit-id '%s/%s'", branch, c.Id().String())
-	tree, err := g.checkoutTree(c.TreeId())
-	if err != nil {
-		return err
-	}
-	defer tree.Free()
-
-	r, err := g.r.References.Create(fmt.Sprintf("refs/head/%s", branch), c.Id(), true, branch)
-	if err != nil {
-		return err
-	}
-	defer r.Free()
-
-	head := fmt.Sprintf("refs/heads/%s", branch)
-	log.Debugf("Setting head as '%s' for branch '%s'", head, branch)
-	err = g.r.SetHead(head)
-	if err != nil {
-		return err
-	}
-	return g.r.CheckoutHead(checkoutOpts)
-}
-
-// checkoutBranch look up branch, and look up head commit, with this information it can checkout the
+// LookupBranchCommit look up branch, and look up head commit, with this information it can checkout the
 // branch tree and finally, set repository information about new head.
-func (g *GitRepo) checkoutBranch(branch string) error {
-	log.Infof("Checking out branch '%s' HEAD...", branch)
-	b, err := g.lookupBranch(branch)
+func (g *GitRepo) LookupBranchCommit(branch string) (*git.Commit, error) {
+	b, err := g.LookupBranch(branch)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer b.Free()
 
 	c, err := g.r.LookupCommit(b.Target())
 	if err != nil {
-		return err
+		return nil, err
 	}
-	defer c.Free()
-
-	tree, err := g.checkoutTree(c.TreeId())
-	if err != nil {
-		return err
-	}
-	defer tree.Free()
-
-	reference := fmt.Sprintf("refs/heads/%s", branch)
-	log.Debugf("Setting reference '%s' on branch '%s'", reference, branch)
-	err = g.r.SetHead(reference)
-	if err != nil {
-		return err
-	}
-	_, err = g.r.References.Create(reference, c.Id(), true, branch)
-	return err
+	return c, nil
 }
 
 // branchIter execute the informed function against each branch in repository.
 func (g *GitRepo) branchIter(fn branchIterFn) error {
 	for _, branch := range g.sortBranches() {
-		if branch != "master" {
-			if err := g.checkoutBranch(branch); err != nil {
-				return err
-			}
+		c, err := g.LookupBranchCommit(branch)
+		if err != nil {
+			return fmt.Errorf("looking up '%s' commit: %w", branch, err)
+		}
+		defer c.Free()
+
+		tree, err := c.Tree()
+		if err != nil {
+			return fmt.Errorf("getting tree for commit: %w", err)
 		}
 
-		log.Infof("Transversing '%s' commits...", branch)
-		odb, err := g.r.Odb()
+		log.Infof("Traversing '%s' commits...", branch)
+		tree.Walk(func(s string, te *git.TreeEntry) int {
+			if te.Filemode != git.FilemodeCommit {
+				return 0
+			}
+			if err = fn(branch, c); err != nil {
+				return -1
+			}
+			return 0
+		})
 		if err != nil {
 			return err
 		}
-		defer odb.Free()
 
-		if err = fn(branch, odb); err != nil {
+		if err = fn(branch, c); err != nil {
 			return err
 		}
 	}
@@ -209,7 +167,11 @@ func (g *GitRepo) branchIter(fn branchIterFn) error {
 
 // ModifiedFiles for a given commit and tree, check what are the files that have changed, return them
 // as string slice.
-func (g *GitRepo) ModifiedFiles(c *git.Commit, tree *git.Tree) ([]string, error) {
+func (g *GitRepo) ModifiedFiles(c *git.Commit) ([]string, error) {
+	tree, err := c.Tree()
+	if err != nil {
+		return nil, fmt.Errorf("getting commit's tree: %w", err)
+	}
 	opts := &git.DiffOptions{}
 	modified := []string{}
 	parentCount := c.ParentCount()
@@ -253,60 +215,18 @@ func (g *GitRepo) ModifiedFiles(c *git.Commit, tree *git.Tree) ([]string, error)
 
 // CommitIter executed informed function on each branch commit.
 func (g *GitRepo) CommitIter(fn CommitIterFn) error {
-	return g.branchIter(func(branch string, odb *git.Odb) error {
-		head, err := g.r.Head()
-		if err != nil {
-			return err
-		}
-		defer head.Free()
-
-		c, err := g.r.LookupCommit(head.Target())
-		if err != nil {
-			return err
-		}
-		defer c.Free()
-
+	return g.branchIter(func(branch string, c *git.Commit) error {
 		tree, err := c.Tree()
 		if err != nil {
 			return err
 		}
 		defer tree.Free()
 
-		if err = fn(branch, c, tree, true); err != nil {
+		if err = fn(branch, c, true); err != nil {
 			return err
 		}
 
-		var counter = 1
-		return odb.ForEach(func(oid *git.Oid) error {
-			if g.cfg.CloneDepth > 0 && counter >= g.cfg.CloneDepth {
-				return nil
-			}
-
-			obj, err := g.r.Lookup(oid)
-			if err != nil {
-				return err
-			}
-			if obj.Type() != git.ObjectCommit {
-				return nil
-			}
-
-			c, err := obj.AsCommit()
-			if err != nil {
-				return err
-			}
-			defer c.Free()
-			if err = g.CheckoutCommit(branch, c); err != nil {
-				return err
-			}
-			tree, err := c.Tree()
-			if err != nil {
-				return err
-			}
-			defer tree.Free()
-
-			counter++
-			return fn(branch, c, tree, false)
-		})
+		return nil
 	})
 }
 
@@ -367,13 +287,10 @@ func (g *GitRepo) FetchBranch(branchName string) error {
 func NewGitRepo(cfg *Config, workdingDir string) (*GitRepo, error) {
 	log.Infof("Working directory at '%s'", workdingDir)
 	opts := &git.CloneOptions{
+		Bare: true,
 		FetchOptions: &git.FetchOptions{
 			DownloadTags: git.DownloadTagsAll,
 		},
-		CheckoutOpts: checkoutOpts,
-	}
-	if cfg.RelativeDir != "" {
-		opts.CheckoutOpts.Paths = []string{cfg.RelativeDir}
 	}
 
 	if cfg.ForceClone {
@@ -406,11 +323,6 @@ func NewGitRepo(cfg *Config, workdingDir string) (*GitRepo, error) {
 		return nil, fmt.Errorf("obtaining repository's head: %w", err)
 	}
 	defer head.Free()
-
-	err = repo.CheckoutHead(&git.CheckoutOptions{Strategy: git.CheckoutForce | git.CheckoutRecreateMissing})
-	if err != nil {
-		return nil, err
-	}
 
 	branches, err := extractBranches(repo)
 	if err != nil {

@@ -84,40 +84,48 @@ func (g *GitRepo) GetFilesFromCommit(
 	commit *git.Commit,
 	path string,
 ) ([]*loader.BufferedFile, error) {
-	idx, err := g.r.Index()
+	tree, err := commit.Tree()
 	if err != nil {
-		return nil, fmt.Errorf("obtaining repository index: %w", err)
+		return nil, fmt.Errorf("obtaining commit tree: %w", err)
 	}
 
 	// files contains the contents to be returned, ready to be used by
 	// `loader.LoadFiles`.
 	files := []*loader.BufferedFile{}
 
-	for i := uint(0); i < idx.EntryCount(); i++ {
-		e, err := idx.EntryByIndex(i)
-		if err != nil {
-			return nil, fmt.Errorf("looking up index entry for path '%s': %w", path, err)
+	tree.Walk(func(curpath string, te *git.TreeEntry) int {
+		// don't even bother looking at something other than blobs.
+		if te.Filemode != git.FilemodeBlob {
+			return 0
 		}
 
-		if !strings.HasPrefix(e.Path, path) {
-			continue
+		// in the case `path` and `curpath` are equal the entry should be
+		// skipped.
+		path := strings.TrimPrefix(curpath, path+"/")
+		if path == curpath {
+			return 0
 		}
 
-		blob, err := g.r.LookupBlob(e.Id)
-		if err != nil {
-			return nil, fmt.Errorf("looking up blob for '%s': %w", e.Id, err)
+		// lookup the entry blob to obtain its contents.
+		blob, lookupErr := g.r.LookupBlob(te.Id)
+		if lookupErr != nil {
+			err = fmt.Errorf("looking up blob for '%s': %w", te.Id, lookupErr)
+			return -1 // interrupts tree.Walk
 		}
 
-		path = strings.TrimPrefix(e.Path, path+"/")
+		files = append(
+			files,
+			&loader.BufferedFile{
+				Name: path + te.Name,
+				Data: blob.Contents(),
+			})
 
-		file := &loader.BufferedFile{
-			Name: path,
-			Data: blob.Contents(),
-		}
-		files = append(files, file)
-	}
+		return 0
+	})
 
-	return files, nil
+	// `err` might be populated if a blob can't be looked up while walking the
+	// commit tree.
+	return files, err
 }
 
 // CheckoutCommit based in branch and commit id, execute tree checkout.

@@ -27,6 +27,7 @@ func init() {
 	flags.String("working-dir", "/var/lib/chart-streams", "Git repository working directory")
 	flags.String("log-level", "info", "Log verbosity level (error, warn, info, debug, trace)")
 	flags.Bool("force-clone", false, "destroys working-dir and clones the repository")
+	flags.String("github-webhook-secret", "", "GitHub's webhook secret for this repository")
 
 	rootCmd.AddCommand(serveCmd)
 	bindViperFlags(flags)
@@ -37,11 +38,12 @@ func runServeCmd(cmd *cobra.Command, args []string) {
 	chartstreams.SetLogLevel(viper.GetString("log-level"))
 
 	cfg := &chartstreams.Config{
-		RepoURL:     viper.GetString("repo-url"),
-		CloneDepth:  viper.GetInt("clone-depth"),
-		ListenAddr:  viper.GetString("listen-addr"),
-		RelativeDir: viper.GetString("relative-dir"),
-		ForceClone:  viper.GetBool("force-clone"),
+		RepoURL:             viper.GetString("repo-url"),
+		CloneDepth:          viper.GetInt("clone-depth"),
+		ListenAddr:          viper.GetString("listen-addr"),
+		RelativeDir:         viper.GetString("relative-dir"),
+		ForceClone:          viper.GetBool("force-clone"),
+		GitHubWebhookSecret: viper.GetString("github-webhook-secret"),
 	}
 
 	log.Printf("Starting server with config: '%#v'", cfg)

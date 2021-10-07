@@ -12,6 +12,8 @@ type FakeChartProvider struct {
 	cfg *Config
 }
 
+var _ ChartProvider = &FakeChartProvider{}
+
 func (f *FakeChartProvider) Initialize() error {
 	return nil
 }
@@ -41,6 +43,10 @@ func (f *FakeChartProvider) GetIndexFile() *helmrepo.IndexFile {
 
 	indexFile.SortEntries()
 	return indexFile
+}
+
+func (f *FakeChartProvider) UpdateBranch(branch string) error {
+	return nil
 }
 
 func NewFakeChartProvider(cfg *Config) *FakeChartProvider {

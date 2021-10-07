@@ -367,13 +367,10 @@ func (g *GitRepo) FetchBranch(branchName string) error {
 func NewGitRepo(cfg *Config, workdingDir string) (*GitRepo, error) {
 	log.Infof("Working directory at '%s'", workdingDir)
 	opts := &git.CloneOptions{
+		Bare: true,
 		FetchOptions: &git.FetchOptions{
 			DownloadTags: git.DownloadTagsAll,
 		},
-		CheckoutOpts: checkoutOpts,
-	}
-	if cfg.RelativeDir != "" {
-		opts.CheckoutOpts.Paths = []string{cfg.RelativeDir}
 	}
 
 	if cfg.ForceClone {

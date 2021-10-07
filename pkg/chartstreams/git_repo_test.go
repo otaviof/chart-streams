@@ -26,8 +26,7 @@ func TestGitRepo_NewGitRepoUpstream(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("CommitIter", func(t *testing.T) {
-		err := r.CommitIter(func(branch string, c *git.Commit, tree *git.Tree, head bool) error {
-			requirePopulatedGitDir(t, tempDir)
+		err := r.CommitIter(func(branch string, c *git.Commit, head bool) error {
 			return nil
 		})
 		assert.NoError(t, err)
@@ -58,8 +57,7 @@ func TestGitRepo_NewGitRepoLocal(t *testing.T) {
 	r, err := NewGitRepo(cfg, tempDir)
 	require.NoError(t, err)
 
-	err = r.CommitIter(func(branch string, c *git.Commit, tree *git.Tree, head bool) error {
-		requirePopulatedGitDir(t, tempDir)
+	err = r.CommitIter(func(branch string, c *git.Commit, head bool) error {
 		return nil
 	})
 	require.NoError(t, err)

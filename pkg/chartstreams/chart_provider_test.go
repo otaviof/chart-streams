@@ -15,23 +15,6 @@ func init() {
 	SetLogLevel("trace")
 }
 
-func requirePopulatedGitDir(t *testing.T, dir string) {
-	files, err := ioutil.ReadDir(dir)
-	require.NoError(t, err)
-
-	count := 0
-	for _, file := range files {
-		if file.Name() == ".git" {
-			t.Logf("Skipping '%s' on '%s'", file.Name(), dir)
-			continue
-		}
-		if file.IsDir() {
-			count++
-		}
-	}
-	require.Truef(t, count > 0, "expected to find directories on '%s' path", dir)
-}
-
 func TestGitChartProvider(t *testing.T) {
 	helmChartName := "one"
 	helmRepoDir, err := util.ChartsRepoDir("../..")
@@ -51,7 +34,6 @@ func TestGitChartProvider(t *testing.T) {
 	t.Run("Initialize", func(t *testing.T) {
 		err := g.Initialize()
 		require.NoError(t, err)
-		requirePopulatedGitDir(t, tempDir)
 	})
 
 	var helmChartVersion string

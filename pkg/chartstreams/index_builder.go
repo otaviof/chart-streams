@@ -2,9 +2,7 @@ package chartstreams
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
-	"path"
 	"strings"
 
 	"helm.sh/helm/v3/pkg/chart/loader"
@@ -42,31 +40,26 @@ func (i *IndexBuilder) GetChartCommitInfo(name, version string) *CommitInfo {
 	return nil
 }
 
-// basePath returns the base path to charts repository.
-func (i *IndexBuilder) basePath() string {
-	return path.Join(i.g.WorkingDir, i.cfg.RelativeDir)
-}
-
-// ChartAbsPath returns the absolute path to informed chart.
-func (i *IndexBuilder) ChartAbsPath(name string) string {
-	return path.Join(i.basePath(), name)
-}
-
 // listAllChartDirs returns a list of all charts found on base chart directory.
-func (i *IndexBuilder) listAllChartDirs() ([]string, error) {
-	dirs, err := ioutil.ReadDir(i.basePath())
+func (i *IndexBuilder) listAllChartDirs(c *git.Commit) ([]string, error) {
+	tree, err := c.Tree()
 	if err != nil {
-		return nil, fmt.Errorf("reading base path %q: %w", i.basePath(), err)
+		return nil, fmt.Errorf("getting commit's tree: %w", err)
 	}
+	defer tree.Free()
 
 	var chartDirs []string
-	for _, dir := range dirs {
-		if !dir.IsDir() || strings.HasPrefix(dir.Name(), ".") {
-			log.Tracef("Skipping entry in directory: '%s'", dir.Name())
-			continue
+	tree.Walk(func(path string, te *git.TreeEntry) int {
+		if te.Filemode != git.FilemodeTree {
+			return 0
 		}
-		chartDirs = append(chartDirs, dir.Name())
-	}
+		parts := strings.Split(path, "/")
+		if len(parts) > 1 || len(parts) == 0 {
+			return 0
+		}
+		chartDirs = append(chartDirs, parts[0])
+		return 0
+	})
 	return chartDirs, nil
 }
 
@@ -81,8 +74,8 @@ func (i *IndexBuilder) relativeDir() string {
 
 // listModifiedChartDirs inspect git commit to discover which charts have changed, return the list
 // of modified charts.
-func (i *IndexBuilder) listModifiedChartDirs(c *git.Commit, tree *git.Tree) ([]string, error) {
-	modified, err := i.g.ModifiedFiles(c, tree)
+func (i *IndexBuilder) listModifiedChartDirs(c *git.Commit) ([]string, error) {
+	modified, err := i.g.ModifiedFiles(c)
 	if err != nil {
 		return nil, fmt.Errorf("obtaining modified files for commit-id %q: %w", c.Id(), err)
 	}
@@ -173,9 +166,11 @@ func (i *IndexBuilder) register(
 // inspectDirs loop chart directories, loading charts and registering them.
 func (i *IndexBuilder) inspectDirs(dirs []string, revision string, c *git.Commit, head bool) error {
 	for _, dir := range dirs {
-		chartAbsPath := i.ChartAbsPath(dir)
-		log.Debugf("Loading chart from '%s'...", chartAbsPath)
-		chart, err := loader.LoadDir(chartAbsPath)
+		files, err := i.g.GetFilesFromCommit(c, dir)
+		if err != nil {
+			return fmt.Errorf("getting files from commit '%s': %w", c.Id(), err)
+		}
+		chart, err := loader.LoadFiles(files)
 		if err != nil {
 			log.Warnf("error loading chart: '%s'", err)
 			continue
@@ -204,15 +199,15 @@ func (i *IndexBuilder) inspectDirs(dirs []string, revision string, c *git.Commit
 // walk through git commits in order to identify which charts have changed, or to load all charts
 // from repository in case of master's HEAD.
 func (i *IndexBuilder) walk() error {
-	return i.g.CommitIter(func(branch string, c *git.Commit, tree *git.Tree, head bool) error {
+	return i.g.CommitIter(func(branch string, c *git.Commit, head bool) error {
 		log.Infof("Inspecting commit-id '%s/%s'", branch, c.Id().String())
 		var chartDirs []string
 		var err error
 		if head && branch == "master" {
 			log.Infof("HEAD: Retrieving all chart directories...")
-			chartDirs, err = i.listAllChartDirs()
+			chartDirs, err = i.listAllChartDirs(c)
 		} else {
-			chartDirs, err = i.listModifiedChartDirs(c, tree)
+			chartDirs, err = i.listModifiedChartDirs(c)
 		}
 		if err != nil {
 			return err

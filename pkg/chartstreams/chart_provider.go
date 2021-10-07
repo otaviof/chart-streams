@@ -3,6 +3,7 @@ package chartstreams
 import (
 	"fmt"
 
+	git "github.com/libgit2/git2go/v31"
 	helmrepo "helm.sh/helm/v3/pkg/repo"
 )
 
@@ -51,6 +52,22 @@ func (g *GitChartProvider) Initialize() error {
 	return nil
 }
 
+func (g *GitChartProvider) BuildPackage(
+	path string,
+	info *CommitInfo,
+	commit *git.Commit,
+) (*Package, error) {
+	files, err := g.gitRepo.GetFilesFromCommit(commit, path)
+	if err != nil {
+		return nil, fmt.Errorf("getting files from commit: %w", err)
+	}
+	p, err := LoadFiles(files, info.Time)
+	if err != nil {
+		return nil, fmt.Errorf("loading files from index: %w", err)
+	}
+	return p, nil
+}
+
 // GetChart returns a chart Package for the given chart name and version.
 func (g *GitChartProvider) GetChart(name string, version string) (*Package, error) {
 	commitInfo := g.indexBuilder.GetChartCommitInfo(name, version)
@@ -62,17 +79,14 @@ func (g *GitChartProvider) GetChart(name string, version string) (*Package, erro
 	if err != nil {
 		return nil, fmt.Errorf("looking up commit %q: %w", commitInfo.ID, err)
 	}
-	if err = g.gitRepo.CheckoutCommit(commitInfo.Revision, c); err != nil {
-		return nil, fmt.Errorf("checking out commit %q: %w", commitInfo.ID, err)
+
+	p, err := g.BuildPackage(name, commitInfo, c)
+	if err != nil {
+		return nil, fmt.Errorf("instantiating package in %q: %w", name, err)
 	}
 
-	absPath := g.indexBuilder.ChartAbsPath(name)
-	p, err := NewPackage(absPath, commitInfo.Time)
-	if err != nil {
-		return nil, fmt.Errorf("instantiating package in %q: %w", absPath, err)
-	}
 	if err = p.Build(); err != nil {
-		return nil, fmt.Errorf("building package for %q: %w", absPath, err)
+		return nil, fmt.Errorf("building package for %q: %w", name, err)
 	}
 	return p, nil
 }

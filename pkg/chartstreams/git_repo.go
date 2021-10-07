@@ -8,6 +8,7 @@ import (
 
 	git "github.com/libgit2/git2go/v31"
 	log "github.com/sirupsen/logrus"
+	"helm.sh/helm/v3/pkg/chart/loader"
 )
 
 // CommitInfo holds together time and commit hash.
@@ -74,6 +75,57 @@ func (g *GitRepo) checkoutTree(oid *git.Oid) (*git.Tree, error) {
 		return nil, fmt.Errorf("checking out tree %q: %w", oid, err)
 	}
 	return tree, nil
+}
+
+// GetFilesFromCommit returns a list of files inside the path for a given
+// commit; this list of files is meant to be consumed by Helm's
+// `loader.LoadFiles` function.
+func (g *GitRepo) GetFilesFromCommit(
+	commit *git.Commit,
+	path string,
+) ([]*loader.BufferedFile, error) {
+	tree, err := commit.Tree()
+	if err != nil {
+		return nil, fmt.Errorf("obtaining commit tree: %w", err)
+	}
+
+	// files contains the contents to be returned, ready to be used by
+	// `loader.LoadFiles`.
+	files := []*loader.BufferedFile{}
+
+	tree.Walk(func(curpath string, te *git.TreeEntry) int {
+		// don't even bother looking at something other than blobs.
+		if te.Filemode != git.FilemodeBlob {
+			return 0
+		}
+
+		// in the case `path` and `curpath` are equal the entry should be
+		// skipped.
+		path := strings.TrimPrefix(curpath, path+"/")
+		if path == curpath {
+			return 0
+		}
+
+		// lookup the entry blob to obtain its contents.
+		blob, lookupErr := g.r.LookupBlob(te.Id)
+		if lookupErr != nil {
+			err = fmt.Errorf("looking up blob for '%s': %w", te.Id, lookupErr)
+			return -1 // interrupts tree.Walk
+		}
+
+		files = append(
+			files,
+			&loader.BufferedFile{
+				Name: path + te.Name,
+				Data: blob.Contents(),
+			})
+
+		return 0
+	})
+
+	// `err` might be populated if a blob can't be looked up while walking the
+	// commit tree.
+	return files, err
 }
 
 // CheckoutCommit based in branch and commit id, execute tree checkout.

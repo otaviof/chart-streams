@@ -53,6 +53,11 @@ func (i *IndexBuilder) listAllChartDirs(c *git.Commit) ([]string, error) {
 		if te.Filemode != git.FilemodeTree {
 			return 0
 		}
+		// since this method is specific to chart dirs, it is fine to skip the
+		// entry if it is in the root.
+		if path == "" {
+			return 0
+		}
 		parts := strings.Split(path, "/")
 		if len(parts) > 1 || len(parts) == 0 {
 			return 0
@@ -166,13 +171,22 @@ func (i *IndexBuilder) register(
 // inspectDirs loop chart directories, loading charts and registering them.
 func (i *IndexBuilder) inspectDirs(dirs []string, revision string, c *git.Commit, head bool) error {
 	for _, dir := range dirs {
-		files, err := i.g.GetFilesFromCommit(c, dir)
+		path := dir
+		if i.cfg.RelativeDir != "" {
+			path = i.cfg.RelativeDir + "/" + dir
+		}
+		path = strings.TrimPrefix(path, "//")
+		files, err := i.g.GetFilesFromCommit(c, path)
 		if err != nil {
 			return fmt.Errorf("getting files from commit '%s': %w", c.Id(), err)
 		}
+		if len(files) == 0 {
+			log.Infof("no files found in '%s' for commit '%s'", path, c.Id())
+			continue
+		}
 		chart, err := loader.LoadFiles(files)
 		if err != nil {
-			log.Warnf("error loading chart: '%s'", err)
+			log.Warnf("error loading chart with files from '%s': '%s'", path, err)
 			continue
 		}
 		if err = chart.Validate(); err != nil {

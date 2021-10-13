@@ -31,7 +31,20 @@ var _ ChartProvider = &GitChartProvider{}
 
 // UpdateBranch fetches the latest changes from the remote.
 func (g *GitChartProvider) UpdateBranch(name string) error {
-	return g.gitRepo.FetchBranch(name)
+
+	if err := g.gitRepo.FetchBranch(name); err != nil {
+		return fmt.Errorf("fetching branch '%s': %w", name, err)
+	}
+	if err := g.BuildIndexFile(); err != nil {
+		return fmt.Errorf("building index file: %w", err)
+	}
+	return nil
+}
+
+func (g *GitChartProvider) BuildIndexFile() error {
+	var err error
+	g.indexFile, err = g.indexBuilder.Build()
+	return err
 }
 
 // GetIndexFile returns the helm repository index-file instance.
@@ -46,7 +59,7 @@ func (g *GitChartProvider) Initialize() error {
 		return err
 	}
 	g.indexBuilder = NewIndexBuilder(g.cfg, g.gitRepo)
-	if g.indexFile, err = g.indexBuilder.Build(); err != nil {
+	if err = g.BuildIndexFile(); err != nil {
 		return err
 	}
 	return nil

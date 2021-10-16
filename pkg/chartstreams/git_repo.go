@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	git "github.com/libgit2/git2go/v31"
+	git "github.com/libgit2/git2go/v33"
 	log "github.com/sirupsen/logrus"
 	"helm.sh/helm/v3/pkg/chart/loader"
 )
@@ -79,38 +79,29 @@ func (g *GitRepo) GetFilesFromCommit(
 	// `loader.LoadFiles`.
 	files := []*loader.BufferedFile{}
 
-	tree.Walk(func(curpath string, te *git.TreeEntry) int {
+	err = tree.Walk(func(curPath string, te *git.TreeEntry) error {
 		// don't even bother looking at something other than blobs.
 		if te.Filemode != git.FilemodeBlob {
-			return 0
+			return nil
 		}
 
 		// in the case `path` and `curpath` are equal the entry should be
 		// skipped.
-		path := strings.TrimPrefix(curpath, path+"/")
-		if path == curpath {
-			return 0
+		path := strings.TrimPrefix(curPath, path+"/")
+		if path == curPath {
+			return nil
 		}
 
 		// lookup the entry blob to obtain its contents.
 		blob, lookupErr := g.r.LookupBlob(te.Id)
 		if lookupErr != nil {
-			err = fmt.Errorf("looking up blob for '%s': %w", te.Id, lookupErr)
-			return -1 // interrupts tree.Walk
+			return fmt.Errorf("looking up blob for '%s': %w", te.Id, lookupErr)
 		}
 
-		files = append(
-			files,
-			&loader.BufferedFile{
-				Name: path + te.Name,
-				Data: blob.Contents(),
-			})
-
-		return 0
+		f := &loader.BufferedFile{Name: path + te.Name, Data: blob.Contents()}
+		files = append(files, f)
+		return nil
 	})
-
-	// `err` might be populated if a blob can't be looked up while walking the
-	// commit tree.
 	return files, err
 }
 
@@ -145,22 +136,16 @@ func (g *GitRepo) branchIter(fn branchIterFn) error {
 		}
 
 		log.Infof("Traversing '%s' commits...", branch)
-		tree.Walk(func(s string, te *git.TreeEntry) int {
+		err = tree.Walk(func(s string, te *git.TreeEntry) error {
 			if te.Filemode != git.FilemodeCommit {
-				return 0
+				return nil
 			}
-			if err = fn(branch, c); err != nil {
-				return -1
-			}
-			return 0
+			return fn(branch, c)
 		})
 		if err != nil {
 			return err
 		}
-
-		if err = fn(branch, c); err != nil {
-			return err
-		}
+		return fn(branch, c)
 	}
 	return nil
 }
@@ -288,7 +273,7 @@ func NewGitRepo(cfg *Config, workdingDir string) (*GitRepo, error) {
 	log.Infof("Working directory at '%s'", workdingDir)
 	opts := &git.CloneOptions{
 		Bare: true,
-		FetchOptions: &git.FetchOptions{
+		FetchOptions: git.FetchOptions{
 			DownloadTags: git.DownloadTagsAll,
 		},
 	}

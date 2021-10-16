@@ -7,16 +7,15 @@ extern void _go_git_populate_clone_callbacks(git_clone_options *opts);
 */
 import "C"
 import (
-	"errors"
 	"runtime"
 	"unsafe"
 )
 
-type RemoteCreateCallback func(repo *Repository, name, url string) (*Remote, ErrorCode)
+type RemoteCreateCallback func(repo *Repository, name, url string) (*Remote, error)
 
 type CloneOptions struct {
-	*CheckoutOpts
-	*FetchOptions
+	CheckoutOptions      CheckoutOptions
+	FetchOptions         FetchOptions
 	Bare                 bool
 	CheckoutBranch       string
 	RemoteCreateCallback RemoteCreateCallback
@@ -71,9 +70,10 @@ func remoteCreateCallback(
 		panic("invalid remote create callback")
 	}
 
-	remote, ret := data.options.RemoteCreateCallback(repo, name, url)
-	if ret < 0 {
-		*data.errorTarget = errors.New(ErrorCode(ret).String())
+	remote, err := data.options.RemoteCreateCallback(repo, name, url)
+
+	if err != nil {
+		*data.errorTarget = err
 		return C.int(ErrorCodeUser)
 	}
 	if remote == nil {
@@ -100,8 +100,8 @@ func populateCloneOptions(copts *C.git_clone_options, opts *CloneOptions, errorT
 	if opts == nil {
 		return nil
 	}
-	populateCheckoutOptions(&copts.checkout_opts, opts.CheckoutOpts, errorTarget)
-	populateFetchOptions(&copts.fetch_opts, opts.FetchOptions, errorTarget)
+	populateCheckoutOptions(&copts.checkout_opts, &opts.CheckoutOptions, errorTarget)
+	populateFetchOptions(&copts.fetch_opts, &opts.FetchOptions, errorTarget)
 	copts.bare = cbool(opts.Bare)
 
 	if opts.RemoteCreateCallback != nil {

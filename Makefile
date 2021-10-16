@@ -25,18 +25,13 @@ E2E_TEST_TARGET ?= ./test/e2e/...
 
 COVERAGE_DIR ?= $(OUTPUT_DIR)/coverage
 
-LIBGIT_VERSION ?=
+LIBGIT_VERSION ?= 1.3.0
 LD_LIBRARY_PATH ?= /usr/local/lib
 
 # all variables are exported to environment
 .EXPORT_ALL_VARIABLES:
 
 default: build
-
-# initialize Go modules vendor directory
-.PHONY: vendor
-vendor:
-	@go mod vendor
 
 # clean up build directory
 .PHONY: clean
@@ -58,7 +53,7 @@ prepare: unarchive-charts-repo
 	@mkdir -p $(COVERAGE_DIR) > /dev/null 2>&1 || true
 
 # build application command-line
-build: prepare vendor $(OUTPUT_DIR)/$(APP)
+build: prepare $(OUTPUT_DIR)/$(APP)
 
 # application binary
 $(OUTPUT_DIR)/$(APP):
@@ -72,6 +67,7 @@ devcontainer-deps:
 	./hack/libgit2-devel.sh
 	./hack/yum-clean-up.sh
 	./hack/helm.sh
+
 # build devcontainer image
 devcontainer-image:
 	docker build --tag="$(IMAGE_DEV_TAG)" --file="Dockerfile.dev" .

@@ -8,7 +8,7 @@ import (
 
 	"github.com/otaviof/chart-streams/test/util"
 
-	git "github.com/libgit2/git2go/v31"
+	git "github.com/libgit2/git2go/v33"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

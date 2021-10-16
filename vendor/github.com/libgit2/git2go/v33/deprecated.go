@@ -230,7 +230,27 @@ func SubmoduleVisitor(csub unsafe.Pointer, name *C.char, handle unsafe.Pointer) 
 	if !ok {
 		panic("invalid submodule visitor callback")
 	}
-	return (C.int)(callback(sub, C.GoString(name)))
+	err := callback(sub, C.GoString(name))
+	if err != nil {
+		return C.int(ErrorCodeUser)
+	}
+	return C.int(ErrorCodeOK)
+}
+
+// reference.go
+
+// Deprecated: ReferenceIsValidName is a deprecated alias of ReferenceNameIsValid.
+func ReferenceIsValidName(name string) bool {
+	valid, _ := ReferenceNameIsValid(name)
+	return valid
+}
+
+// remote.go
+
+// Deprecated: RemoteIsValidName is a deprecated alias of RemoteNameIsValid.
+func RemoteIsValidName(name string) bool {
+	valid, _ := RemoteNameIsValid(name)
+	return valid
 }
 
 // tree.go
@@ -239,9 +259,13 @@ func SubmoduleVisitor(csub unsafe.Pointer, name *C.char, handle unsafe.Pointer) 
 func CallbackGitTreeWalk(_root *C.char, entry *C.git_tree_entry, ptr unsafe.Pointer) C.int {
 	root := C.GoString(_root)
 
-	if callback, ok := pointerHandles.Get(ptr).(TreeWalkCallback); ok {
-		return C.int(callback(root, newTreeEntry(entry)))
-	} else {
+	callback, ok := pointerHandles.Get(ptr).(TreeWalkCallback)
+	if !ok {
 		panic("invalid treewalk callback")
 	}
+	err := callback(root, newTreeEntry(entry))
+	if err != nil {
+		return C.int(ErrorCodeUser)
+	}
+	return C.int(ErrorCodeOK)
 }

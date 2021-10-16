@@ -225,9 +225,9 @@ github.com/inconshreveable/mousetrap
 github.com/json-iterator/go
 # github.com/leodido/go-urn v1.2.0
 github.com/leodido/go-urn
-# github.com/libgit2/git2go/v31 v31.6.1
+# github.com/libgit2/git2go/v33 v33.0.0
 ## explicit
-github.com/libgit2/git2go/v31
+github.com/libgit2/git2go/v33
 # github.com/liggitt/tabwriter v0.0.0-20181228230101-89fcab3d43de
 github.com/liggitt/tabwriter
 # github.com/magiconair/properties v1.8.1
@@ -287,6 +287,8 @@ github.com/prometheus/common/model
 github.com/prometheus/procfs
 github.com/prometheus/procfs/internal/fs
 github.com/prometheus/procfs/internal/util
+# github.com/rjz/githubhook v0.0.1
+## explicit
 # github.com/sirupsen/logrus v1.8.1
 ## explicit
 github.com/sirupsen/logrus

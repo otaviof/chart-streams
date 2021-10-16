@@ -121,7 +121,7 @@ func (t *Tree) EntryCount() uint64 {
 	return uint64(num)
 }
 
-type TreeWalkCallback func(string, *TreeEntry) int
+type TreeWalkCallback func(string, *TreeEntry) error
 type treeWalkCallbackData struct {
 	callback    TreeWalkCallback
 	errorTarget *error
@@ -134,15 +134,30 @@ func treeWalkCallback(_root *C.char, entry *C.git_tree_entry, ptr unsafe.Pointer
 		panic("invalid treewalk callback")
 	}
 
-	ret := data.callback(C.GoString(_root), newTreeEntry(entry))
-	if ret < 0 {
-		*data.errorTarget = errors.New(ErrorCode(ret).String())
+	err := data.callback(C.GoString(_root), newTreeEntry(entry))
+	if err == TreeWalkSkip {
+		return C.int(1)
+	} else if err != nil {
+		*data.errorTarget = err
 		return C.int(ErrorCodeUser)
 	}
 
 	return C.int(ErrorCodeOK)
 }
 
+// TreeWalkSkip is an error that can be returned form TreeWalkCallback to skip
+// a subtree from being expanded.
+var TreeWalkSkip = errors.New("skip")
+
+// Walk traverses the entries in a tree and its subtrees in pre order.
+//
+// The entries will be traversed in the pre order, children subtrees will be
+// automatically loaded as required, and the callback will be called once per
+// entry with the current (relative) root for the entry and the entry data
+// itself.
+//
+// If the callback returns TreeWalkSkip, the passed entry will be skipped on
+// the traversal. Any other non-nil error stops the walk.
 func (t *Tree) Walk(callback TreeWalkCallback) error {
 	var err error
 	data := treeWalkCallbackData{

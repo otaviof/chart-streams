@@ -69,15 +69,15 @@ const (
 	ConnectDirectionPush  ConnectDirection = C.GIT_DIRECTION_PUSH
 )
 
-type TransportMessageCallback func(str string) ErrorCode
-type CompletionCallback func(RemoteCompletion) ErrorCode
+type TransportMessageCallback func(str string) error
+type CompletionCallback func(RemoteCompletion) error
 type CredentialsCallback func(url string, username_from_url string, allowed_types CredentialType) (*Credential, error)
-type TransferProgressCallback func(stats TransferProgress) ErrorCode
-type UpdateTipsCallback func(refname string, a *Oid, b *Oid) ErrorCode
-type CertificateCheckCallback func(cert *Certificate, valid bool, hostname string) ErrorCode
-type PackbuilderProgressCallback func(stage int32, current, total uint32) ErrorCode
-type PushTransferProgressCallback func(current, total uint32, bytes uint) ErrorCode
-type PushUpdateReferenceCallback func(refname, status string) ErrorCode
+type TransferProgressCallback func(stats TransferProgress) error
+type UpdateTipsCallback func(refname string, a *Oid, b *Oid) error
+type CertificateCheckCallback func(cert *Certificate, valid bool, hostname string) error
+type PackbuilderProgressCallback func(stage int32, current, total uint32) error
+type PushTransferProgressCallback func(current, total uint32, bytes uint) error
+type PushUpdateReferenceCallback func(refname, status string) error
 
 type RemoteCallbacks struct {
 	SidebandProgressCallback TransportMessageCallback
@@ -252,7 +252,7 @@ const (
 // Certificate represents the two possible certificates which libgit2
 // knows it might find. If Kind is CertficateX509 then the X509 field
 // will be filled. If Kind is CertificateHostkey then the Hostkey
-// field will be fille.d
+// field will be filled.
 type Certificate struct {
 	Kind    CertificateKind
 	X509    *x509.Certificate
@@ -266,7 +266,7 @@ const (
 	HostkeyMD5    HostkeyKind = C.GIT_CERT_SSH_MD5
 	HostkeySHA1   HostkeyKind = C.GIT_CERT_SSH_SHA1
 	HostkeySHA256 HostkeyKind = C.GIT_CERT_SSH_SHA256
-	HostkeyRaw    HostkeyKind = 1 << 3
+	HostkeyRaw    HostkeyKind = C.GIT_CERT_SSH_RAW
 )
 
 // Server host key information. A bitmask containing the available fields.
@@ -329,10 +329,8 @@ func sidebandProgressCallback(errorMessage **C.char, _str *C.char, _len C.int, h
 	if data.callbacks.SidebandProgressCallback == nil {
 		return C.int(ErrorCodeOK)
 	}
-	str := C.GoStringN(_str, _len)
-	ret := data.callbacks.SidebandProgressCallback(str)
-	if ret < 0 {
-		err := errors.New(ErrorCode(ret).String())
+	err := data.callbacks.SidebandProgressCallback(C.GoStringN(_str, _len))
+	if err != nil {
 		if data.errorTarget != nil {
 			*data.errorTarget = err
 		}
@@ -342,14 +340,13 @@ func sidebandProgressCallback(errorMessage **C.char, _str *C.char, _len C.int, h
 }
 
 //export completionCallback
-func completionCallback(errorMessage **C.char, completion_type C.git_remote_completion_type, handle unsafe.Pointer) C.int {
+func completionCallback(errorMessage **C.char, completionType C.git_remote_completion_type, handle unsafe.Pointer) C.int {
 	data := pointerHandles.Get(handle).(*remoteCallbacksData)
 	if data.callbacks.CompletionCallback == nil {
 		return C.int(ErrorCodeOK)
 	}
-	ret := data.callbacks.CompletionCallback(RemoteCompletion(completion_type))
-	if ret < 0 {
-		err := errors.New(ErrorCode(ret).String())
+	err := data.callbacks.CompletionCallback(RemoteCompletion(completionType))
+	if err != nil {
 		if data.errorTarget != nil {
 			*data.errorTarget = err
 		}
@@ -396,9 +393,8 @@ func transferProgressCallback(errorMessage **C.char, stats *C.git_transfer_progr
 	if data.callbacks.TransferProgressCallback == nil {
 		return C.int(ErrorCodeOK)
 	}
-	ret := data.callbacks.TransferProgressCallback(newTransferProgressFromC(stats))
-	if ret < 0 {
-		err := errors.New(ErrorCode(ret).String())
+	err := data.callbacks.TransferProgressCallback(newTransferProgressFromC(stats))
+	if err != nil {
 		if data.errorTarget != nil {
 			*data.errorTarget = err
 		}
@@ -422,9 +418,8 @@ func updateTipsCallback(
 	refname := C.GoString(_refname)
 	a := newOidFromC(_a)
 	b := newOidFromC(_b)
-	ret := data.callbacks.UpdateTipsCallback(refname, a, b)
-	if ret < 0 {
-		err := errors.New(ErrorCode(ret).String())
+	err := data.callbacks.UpdateTipsCallback(refname, a, b)
+	if err != nil {
 		if data.errorTarget != nil {
 			*data.errorTarget = err
 		}
@@ -481,6 +476,17 @@ func certificateCheckCallback(
 		C.memcpy(unsafe.Pointer(&cert.Hostkey.HashMD5[0]), unsafe.Pointer(&ccert.hash_md5[0]), C.size_t(len(cert.Hostkey.HashMD5)))
 		C.memcpy(unsafe.Pointer(&cert.Hostkey.HashSHA1[0]), unsafe.Pointer(&ccert.hash_sha1[0]), C.size_t(len(cert.Hostkey.HashSHA1)))
 		C.memcpy(unsafe.Pointer(&cert.Hostkey.HashSHA256[0]), unsafe.Pointer(&ccert.hash_sha256[0]), C.size_t(len(cert.Hostkey.HashSHA256)))
+		if (cert.Hostkey.Kind & HostkeyRaw) == HostkeyRaw {
+			cert.Hostkey.Hostkey = C.GoBytes(unsafe.Pointer(ccert.hostkey), C.int(ccert.hostkey_len))
+			var err error
+			cert.Hostkey.SSHPublicKey, err = ssh.ParsePublicKey(cert.Hostkey.Hostkey)
+			if err != nil {
+				if data.errorTarget != nil {
+					*data.errorTarget = err
+				}
+				return setCallbackError(errorMessage, err)
+			}
+		}
 	} else {
 		err := errors.New("unsupported certificate type")
 		if data.errorTarget != nil {
@@ -489,9 +495,8 @@ func certificateCheckCallback(
 		return setCallbackError(errorMessage, err)
 	}
 
-	ret := data.callbacks.CertificateCheckCallback(&cert, valid, host)
-	if ret < 0 {
-		err := errors.New(ErrorCode(ret).String())
+	err := data.callbacks.CertificateCheckCallback(&cert, valid, host)
+	if err != nil {
 		if data.errorTarget != nil {
 			*data.errorTarget = err
 		}
@@ -507,9 +512,8 @@ func packProgressCallback(errorMessage **C.char, stage C.int, current, total C.u
 		return C.int(ErrorCodeOK)
 	}
 
-	ret := data.callbacks.PackProgressCallback(int32(stage), uint32(current), uint32(total))
-	if ret < 0 {
-		err := errors.New(ErrorCode(ret).String())
+	err := data.callbacks.PackProgressCallback(int32(stage), uint32(current), uint32(total))
+	if err != nil {
 		if data.errorTarget != nil {
 			*data.errorTarget = err
 		}
@@ -525,9 +529,8 @@ func pushTransferProgressCallback(errorMessage **C.char, current, total C.uint, 
 		return C.int(ErrorCodeOK)
 	}
 
-	ret := data.callbacks.PushTransferProgressCallback(uint32(current), uint32(total), uint(bytes))
-	if ret < 0 {
-		err := errors.New(ErrorCode(ret).String())
+	err := data.callbacks.PushTransferProgressCallback(uint32(current), uint32(total), uint(bytes))
+	if err != nil {
 		if data.errorTarget != nil {
 			*data.errorTarget = err
 		}
@@ -543,9 +546,8 @@ func pushUpdateReferenceCallback(errorMessage **C.char, refname, status *C.char,
 		return C.int(ErrorCodeOK)
 	}
 
-	ret := data.callbacks.PushUpdateReferenceCallback(C.GoString(refname), C.GoString(status))
-	if ret < 0 {
-		err := errors.New(ErrorCode(ret).String())
+	err := data.callbacks.PushUpdateReferenceCallback(C.GoString(refname), C.GoString(status))
+	if err != nil {
 		if data.errorTarget != nil {
 			*data.errorTarget = err
 		}
@@ -573,12 +575,20 @@ func freeProxyOptions(copts *C.git_proxy_options) {
 	C.free(unsafe.Pointer(copts.url))
 }
 
-// RemoteIsValidName returns whether the remote name is well-formed.
-func RemoteIsValidName(name string) bool {
+// RemoteNameIsValid returns whether the remote name is well-formed.
+func RemoteNameIsValid(name string) (bool, error) {
 	cname := C.CString(name)
 	defer C.free(unsafe.Pointer(cname))
 
-	return C.git_remote_is_valid_name(cname) == 1
+	runtime.LockOSThread()
+	defer runtime.UnlockOSThread()
+
+	var valid C.int
+	ret := C.git_remote_name_is_valid(&valid, cname)
+	if ret < 0 {
+		return false, MakeGitError(ret)
+	}
+	return valid == 1, nil
 }
 
 // free releases the resources of the Remote.

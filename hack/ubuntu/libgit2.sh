@@ -18,6 +18,7 @@ TMPDIR="$(mktemp -d)"
 cd ${TMPDIR}
 
 echo "# Installing dependencies..."
+apt update
 apt install --yes --quiet \
     curl \
     cmake \

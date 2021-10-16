@@ -8,7 +8,7 @@ import (
 	"helm.sh/helm/v3/pkg/chart/loader"
 	helmrepo "helm.sh/helm/v3/pkg/repo"
 
-	git "github.com/libgit2/git2go/v31"
+	git "github.com/libgit2/git2go/v33"
 	log "github.com/sirupsen/logrus"
 	helmchart "helm.sh/helm/v3/pkg/chart"
 )
@@ -49,23 +49,23 @@ func (i *IndexBuilder) listAllChartDirs(c *git.Commit) ([]string, error) {
 	defer tree.Free()
 
 	var chartDirs []string
-	tree.Walk(func(curPath string, te *git.TreeEntry) int {
+	err = tree.Walk(func(curPath string, te *git.TreeEntry) error {
 		if te.Filemode != git.FilemodeTree {
-			return 0
+			return nil
 		}
 		// since this method is specific to chart dirs, it is fine to skip the
 		// entry if it is in the root.
 		if curPath == "" {
-			return 0
+			return nil
 		}
 		parts := strings.Split(curPath, "/")
 		if len(parts) > 1 || len(parts) == 0 {
-			return 0
+			return nil
 		}
 		chartDirs = append(chartDirs, parts[0])
-		return 0
+		return nil
 	})
-	return chartDirs, nil
+	return chartDirs, err
 }
 
 // relativeDir prepare relative directory to be compared as string prefix.

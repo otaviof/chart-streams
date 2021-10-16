@@ -3,7 +3,7 @@ package chartstreams
 import (
 	"fmt"
 
-	git "github.com/libgit2/git2go/v31"
+	git "github.com/libgit2/git2go/v33"
 	helmrepo "helm.sh/helm/v3/pkg/repo"
 )
 

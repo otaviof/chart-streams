@@ -8,7 +8,7 @@ set -eu
 LIBGIT_HOST="github.com"
 LIBGIT_PATH="libgit2/libgit2/archive/refs/tags"
 
-LIBGIT_VERSION=${LIBGIT_VERSION:-1.2.0}
+LIBGIT_VERSION=${LIBGIT_VERSION:-1.3.0}
 
 LIBGIT_TARBALL="v${LIBGIT_VERSION}.tar.gz"
 LIBGIT_DIR="libgit2-${LIBGIT_VERSION}"

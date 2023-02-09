@@ -135,7 +135,7 @@ github.com/gin-contrib/sse
 # github.com/gin-gonic/contrib v0.0.0-20191209060500-d6e26eeaa607
 ## explicit
 github.com/gin-gonic/contrib/ginrus
-# github.com/gin-gonic/gin v1.7.0
+# github.com/gin-gonic/gin v1.7.7
 ## explicit
 github.com/gin-gonic/gin
 github.com/gin-gonic/gin/binding
@@ -287,6 +287,8 @@ github.com/prometheus/common/model
 github.com/prometheus/procfs
 github.com/prometheus/procfs/internal/fs
 github.com/prometheus/procfs/internal/util
+# github.com/rjz/githubhook v0.0.1
+## explicit
 # github.com/sirupsen/logrus v1.8.1
 ## explicit
 github.com/sirupsen/logrus
